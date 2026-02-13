@@ -1,11 +1,9 @@
-const API_URL = "http://localhost:5000/api/player";
+const API_URL = "/api/player";
 
-// Get token from localStorage
 function getToken() {
   return localStorage.getItem("adminToken");
 }
 
-// Create player
 async function createPlayer() {
   const username = document.getElementById("username").value;
   const email = document.getElementById("email").value;
@@ -38,7 +36,6 @@ async function createPlayer() {
   }
 }
 
-// Load all players
 async function loadPlayers() {
   const token = getToken();
   if (!token) return alert("Not authorized");
@@ -67,8 +64,5 @@ async function loadPlayers() {
   }
 }
 
-// On load
 window.onload = loadPlayers;
-
-// Expose globally
 window.createPlayer = createPlayer;

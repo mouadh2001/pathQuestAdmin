@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/admin";
+const API_URL = "/api/admin";
 
 async function login() {
   const email = document.getElementById("email").value;
@@ -25,5 +25,4 @@ async function login() {
   }
 }
 
-// Expose globally
 window.login = login;
