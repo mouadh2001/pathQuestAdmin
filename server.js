@@ -10,10 +10,13 @@ import playerRoutes from "./server/routes/playerRoutes.js";
 const app = express();
 
 connectDB();
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
+});
 
 app.use(
   cors({
-    origin: "*"
+    origin: "*",
   }),
 );
 app.use(express.json());
