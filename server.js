@@ -29,6 +29,6 @@ app.use(express.json());
 app.use("/api/admin", adminRoutes);
 app.use("/api/player", playerRoutes);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`Server running on port ${process.env.PORT || 5000}`);
 });
