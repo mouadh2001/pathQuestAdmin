@@ -16,7 +16,7 @@ connectDB();
 app.use(express.static(path.join(__dirname, "admin-aclient/public")));
 
 app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
+  res.sendFile(path.join(__dirname, "admin-client/public/dashboard.html"));
 });
 
 app.use(
