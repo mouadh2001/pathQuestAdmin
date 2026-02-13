@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 connectDB();
-app.use(express.static(path.join(__dirname, "public/html")));
+app.use(express.static(path.join(__dirname, "admin-aclient/public")));
 
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
