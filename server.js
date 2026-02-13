@@ -11,24 +11,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
 
 connectDB();
-app.use(express.static(path.join(__dirname, "admin-client/public")));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "admin-client/public/dashboard.html"));
-});
-
 app.use(
   cors({
     origin: "*",
   }),
 );
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "admin-client/public")));
+
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
+});
+
+
+
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/player", playerRoutes);
 
-app.listen(process.env.PORT || 5000, () => {
-  console.log(`Server running on port ${process.env.PORT || 5000}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
