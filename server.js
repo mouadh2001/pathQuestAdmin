@@ -2,14 +2,19 @@ import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
 import cors from "cors";
-
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./server/config/db.js";
 import adminRoutes from "./server/routes/adminRoutes.js";
 import playerRoutes from "./server/routes/playerRoutes.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 connectDB();
+app.use(express.static(path.join(__dirname, "public/html")));
+
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
