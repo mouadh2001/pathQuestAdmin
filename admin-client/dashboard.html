@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="./css/dashboard.css">
+</head>
+<body>
+
+<div class="container">
+  <div class="form-card">
+    <h2>Create Player</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="createPlayer()">Create Player</button>
+  </div>
+
+  <h2>Players List</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody id="playersTable"></tbody>
+  </table>
+</div>
+
+
+<script src="./js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+/* ===== Reset & Body ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6fa;
+  color: #333;
+  padding: 30px;
+}
+
+/* ===== Container ===== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ===== Headings ===== */
+h2 {
+  font-size: 26px;
+  color: #4e54c8;
+  margin-bottom: 20px;
+}
+
+/* ===== Form Inputs ===== */
+input {
+  padding: 10px 12px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+input:focus {
+  border-color: #4e54c8;
+  box-shadow: 0 0 5px rgba(78, 84, 200, 0.5);
+  outline: none;
+}
+
+/* ===== Buttons ===== */
+button {
+  padding: 10px 20px;
+  background-color: #4e54c8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background-color: #3b3fc1;
+  box-shadow: 0 5px 15px rgba(78, 84, 200, 0.3);
+}
+
+/* ===== Table Styling ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+thead {
+  background-color: #4e54c8;
+  color: #fff;
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: left;
+}
+
+tr:nth-child(even) {
+  background-color: #f8f8f8;
+}
+
+tr:hover {
+  background-color: #e8e8ff;
+}
+
+/* ===== Cards for Form ===== */
+.form-card {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+  margin-bottom: 40px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  input, button {
+    width: 100%;
+    margin-right: 0;
+  }
+}
