@@ -3,7 +3,7 @@ dotenv.config();
 
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import Admin from "./models/admin.js";
+import Admin from "./server/models/admin.js";
 
 mongoose.connect(process.env.MONGO_URI);
 

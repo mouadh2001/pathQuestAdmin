@@ -3,9 +3,9 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 
-import connectDB from "./config/db.js";
-import adminRoutes from "./routes/adminRoutes.js";
-import playerRoutes from "./routes/playerRoutes.js";
+import connectDB from "./server/config/db.js";
+import adminRoutes from "./server/routes/adminRoutes.js";
+import playerRoutes from "./server/routes/playerRoutes.js";
 
 const app = express();
 
