@@ -1,4 +1,7 @@
 const API_URL = "/api/player";
+if (!localStorage.getItem("adminToken")) {
+  window.location.href = "login.html";
+}
 
 function getToken() {
   return localStorage.getItem("adminToken");
