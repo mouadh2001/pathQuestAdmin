@@ -123,6 +123,7 @@ const updatePlayerStats = async (req, res) => {
 
 router.put("/stats", playerAuthMiddleware, updatePlayerStats);
 router.post("/stats", playerAuthMiddleware, updatePlayerStats);
+router.post("/stats/create", playerAuthMiddleware, updatePlayerStats);
 
 router.get("/stats/history", playerAuthMiddleware, async (req, res) => {
   try {
