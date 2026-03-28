@@ -6,7 +6,7 @@
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f4f6fa;
   color: #333;
   padding: 30px;
@@ -67,7 +67,7 @@ table {
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
 }
 
 thead {
@@ -75,7 +75,8 @@ thead {
   color: #fff;
 }
 
-th, td {
+th,
+td {
   padding: 12px 15px;
   text-align: left;
 }
@@ -88,18 +89,67 @@ tr:hover {
   background-color: #e8e8ff;
 }
 
+tr.clickable {
+  cursor: pointer;
+}
+
+tr.selected {
+  background-color: #d6d6ff;
+}
+
+.players-controls {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.players-controls span {
+  font-weight: 600;
+  color: #4e54c8;
+}
+
+.player-details {
+  margin-top: 30px;
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.player-details.hidden {
+  display: none;
+}
+
+.player-details dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 20px;
+}
+
+.player-details dt {
+  font-weight: 700;
+  color: #333;
+}
+
+.player-details dd {
+  margin: 0;
+  color: #555;
+}
+
 /* ===== Cards for Form ===== */
 .form-card {
   background: #fff;
   padding: 25px;
   border-radius: 12px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
   margin-bottom: 40px;
 }
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
-  input, button {
+  input,
+  button {
     width: 100%;
     margin-right: 0;
   }
