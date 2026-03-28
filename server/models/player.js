@@ -7,7 +7,10 @@ const playerSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
   stats: {
     score: { type: Number, default: 0 },
-    level: { type: Number, default: 1 }
+    level: { type: Number, default: 1 },
+    correct: { type: Number, default: 0 },
+    incorrect: { type: Number, default: 0 },
+    time: { type: Number, default: 0 }
   },
   createdAt: { type: Date, default: Date.now }
 });

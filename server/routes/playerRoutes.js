@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Player from "../models/player.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import playerAuthMiddleware from "../middleware/playerAuthMiddleware.js";
 
 const router = express.Router();
 
@@ -68,6 +69,38 @@ router.post("/create", authMiddleware, async (req, res) => {
 router.get("/all", authMiddleware, async (req, res) => {
   const players = await Player.find();
   res.json(players);
+});
+
+/* ===============================
+   UPDATE PLAYER STATS
+================================= */
+router.put("/stats", playerAuthMiddleware, async (req, res) => {
+  try {
+    const { score, correct, incorrect, time } = req.body;
+    
+    // We increment the stats or just set them. Assuming they represent latest session or cumulative.
+    // The user wants to push stats, let's just increment them to accumulate stats across plays.
+    // Wait, the client sends the total or just the current session?
+    // In StatsService, it tracks current session stats. So server should probably increment.
+    
+    const updatedPlayer = await Player.findByIdAndUpdate(
+      req.player.id,
+      {
+        $inc: {
+          "stats.score": Number(score) || 0,
+          "stats.correct": Number(correct) || 0,
+          "stats.incorrect": Number(incorrect) || 0,
+          "stats.time": Number(time) || 0,
+        }
+      },
+      { new: true }
+    );
+    
+    res.json({ message: "Stats updated successfully", stats: updatedPlayer.stats });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error updating stats" });
+  }
 });
 
 export default router;
