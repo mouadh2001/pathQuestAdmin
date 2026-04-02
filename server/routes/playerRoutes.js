@@ -77,12 +77,14 @@ router.get("/all", authMiddleware, async (req, res) => {
 ================================= */
 const updatePlayerStats = async (req, res) => {
   try {
-    const { score, correct, incorrect, time, questionStats = {} } = req.body;
+    const { levelKey, score, correct, incorrect, time, questionStats = {} } = req.body;
     const player = await Player.findById(req.player.id).select("username");
 
     if (!player) {
       return res.status(404).json({ message: "Player not found" });
     }
+    
+    const levelId = levelKey || "unknown_level";
 
     const incQuery = {
       "stats.score": Number(score) || 0,
@@ -91,17 +93,19 @@ const updatePlayerStats = async (req, res) => {
       "stats.time": Number(time) || 0,
     };
 
-    if (questionStats && typeof questionStats === "object") {
-      for (const [qId, qData] of Object.entries(questionStats)) {
-        incQuery[`stats.questionStats.${qId}.correct`] = Number(qData.correct) || 0;
-        incQuery[`stats.questionStats.${qId}.wrong`] = Number(qData.wrong) || 0;
-      }
-    }
-
     const updatedPlayer = await Player.findByIdAndUpdate(
       req.player.id,
       {
         $inc: incQuery,
+        $set: {
+           [`levelStats.${levelId}`]: {
+             score: Number(score) || 0,
+             correct: Number(correct) || 0,
+             incorrect: Number(incorrect) || 0,
+             time: Number(time) || 0,
+             questionStats
+           }
+        }
       },
       { new: true },
     );
@@ -109,6 +113,7 @@ const updatePlayerStats = async (req, res) => {
     const statEntry = await PlayerStat.create({
       player: player._id,
       username: player.username,
+      levelKey: levelId,
       score: Number(score) || 0,
       correct: Number(correct) || 0,
       incorrect: Number(incorrect) || 0,
@@ -123,6 +128,7 @@ const updatePlayerStats = async (req, res) => {
         username: player.username,
       },
       stats: updatedPlayer.stats,
+      levelStats: updatedPlayer.levelStats,
       statEntry,
     });
   } catch (error) {

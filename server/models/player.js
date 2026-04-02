@@ -13,6 +13,17 @@ const playerSchema = new mongoose.Schema({
     time: { type: Number, default: 0 },
     questionStats: { type: mongoose.Schema.Types.Mixed, default: {} }
   },
+  levelStats: {
+    type: Map,
+    of: new mongoose.Schema({
+      score: { type: Number, default: 0 },
+      correct: { type: Number, default: 0 },
+      incorrect: { type: Number, default: 0 },
+      time: { type: Number, default: 0 },
+      questionStats: { type: mongoose.Schema.Types.Mixed, default: {} }
+    }, { _id: false }),
+    default: {}
+  },
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -119,35 +119,47 @@ function renderPlayerDetails(player) {
 
   details.classList.remove("hidden");
 
-  let questionStatsHtml = "";
-  if (player.stats?.questionStats && Object.keys(player.stats.questionStats).length > 0) {
-    const rows = Object.entries(player.stats.questionStats)
-      .map(([qId, st]) => `
-        <tr>
-          <td>${qId}</td>
-          <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
-          <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
-        </tr>
-      `)
-      .join("");
-
-    questionStatsHtml = `
-      <div style="margin-top: 20px;">
-        <h3>Detailed Question Stats</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; text-align: left;">
-          <thead>
-            <tr style="border-bottom: 2px solid #ccc;">
-              <th style="padding: 8px;">Question ID</th>
-              <th style="padding: 8px;">Correct</th>
-              <th style="padding: 8px;">Incorrect</th>
+  let levelStatsHtml = "";
+  if (player.levelStats && Object.keys(player.levelStats).length > 0) {
+    for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
+      let questionStatsHtml = "";
+      if (levelData.questionStats && Object.keys(levelData.questionStats).length > 0) {
+        const rows = Object.entries(levelData.questionStats)
+          .map(([qId, st]) => `
+            <tr>
+              <td>${qId}</td>
+              <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
+              <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>
-    `;
+          `)
+          .join("");
+
+        questionStatsHtml = `
+          <table style="width: 100%; border-collapse: collapse; margin-top: 5px; text-align: left; background: #f9fafb;">
+            <thead>
+              <tr style="border-bottom: 2px solid #ccc;">
+                <th style="padding: 4px;">Question ID</th>
+                <th style="padding: 4px;">Correct</th>
+                <th style="padding: 4px;">Incorrect</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
+      }
+
+      levelStatsHtml += `
+        <div style="margin-top: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 5px;">
+          <h3 style="margin-top:0; color: #1f2937;">Level: ${levelKey.toUpperCase()}</h3>
+          <p style="margin: 5px 0; font-size: 14px;">Score: ${levelData.score || 0} | Correct: ${levelData.correct || 0} | Incorrect: ${levelData.incorrect || 0} | Time: ${levelData.time || 0}s</p>
+          ${questionStatsHtml}
+        </div>
+      `;
+    }
+  } else {
+    levelStatsHtml = "<p style='margin-top: 15px; color: #6b7280;'>No level-specific stats recorded yet.</p>";
   }
 
   content.innerHTML = `
@@ -156,12 +168,12 @@ function renderPlayerDetails(player) {
       <dt>Email</dt><dd>${player.email}</dd>
       <dt>Player ID</dt><dd>${player._id}</dd>
       <dt>Created At</dt><dd>${new Date(player.createdAt).toLocaleString()}</dd>
-      <dt>Score</dt><dd>${player.stats?.score ?? 0}</dd>
-      <dt>Correct</dt><dd>${player.stats?.correct ?? 0}</dd>
-      <dt>Incorrect</dt><dd>${player.stats?.incorrect ?? 0}</dd>
-      <dt>Time (s)</dt><dd>${player.stats?.time ?? 0}</dd>
+      <dt>Total Score</dt><dd>${player.stats?.score ?? 0}</dd>
+      <dt>Total Correct</dt><dd>${player.stats?.correct ?? 0}</dd>
+      <dt>Total Incorrect</dt><dd>${player.stats?.incorrect ?? 0}</dd>
+      <dt>Total Time (s)</dt><dd>${player.stats?.time ?? 0}</dd>
     </dl>
-    ${questionStatsHtml}
+    ${levelStatsHtml}
   `;
 }
 

@@ -7,6 +7,7 @@ const playerStatSchema = new mongoose.Schema({
     required: true,
   },
   username: { type: String, required: true },
+  levelKey: { type: String, default: "unknown_level" },
   score: { type: Number, default: 0 },
   correct: { type: Number, default: 0 },
   incorrect: { type: Number, default: 0 },
