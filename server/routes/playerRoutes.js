@@ -78,7 +78,7 @@ router.get("/all", authMiddleware, async (req, res) => {
 const updatePlayerStats = async (req, res) => {
   try {
     const { levelKey, score, correct, incorrect, time, questionStats = {} } = req.body;
-    const player = await Player.findById(req.player.id).select("username");
+    const player = await Player.findById(req.player.id);
 
     if (!player) {
       return res.status(404).json({ message: "Player not found" });
@@ -86,29 +86,34 @@ const updatePlayerStats = async (req, res) => {
     
     const levelId = levelKey || "unknown_level";
 
-    const incQuery = {
-      "stats.score": Number(score) || 0,
-      "stats.correct": Number(correct) || 0,
-      "stats.incorrect": Number(incorrect) || 0,
-      "stats.time": Number(time) || 0,
-    };
+    // Set the new level stats, replacing any previous attempt for this level
+    player.levelStats.set(levelId, {
+      score: Number(score) || 0,
+      correct: Number(correct) || 0,
+      incorrect: Number(incorrect) || 0,
+      time: Number(time) || 0,
+      questionStats
+    });
 
-    const updatedPlayer = await Player.findByIdAndUpdate(
-      req.player.id,
-      {
-        $inc: incQuery,
-        $set: {
-           [`levelStats.${levelId}`]: {
-             score: Number(score) || 0,
-             correct: Number(correct) || 0,
-             incorrect: Number(incorrect) || 0,
-             time: Number(time) || 0,
-             questionStats
-           }
-        }
-      },
-      { new: true },
-    );
+    // Recalculate global stats to avoid unbounded accumulation
+    let totalScore = 0;
+    let totalCorrect = 0;
+    let totalIncorrect = 0;
+    let totalTime = 0;
+
+    for (const data of player.levelStats.values()) {
+      totalScore += data.score || 0;
+      totalCorrect += data.correct || 0;
+      totalIncorrect += data.incorrect || 0;
+      totalTime += data.time || 0;
+    }
+
+    player.stats.score = totalScore;
+    player.stats.correct = totalCorrect;
+    player.stats.incorrect = totalIncorrect;
+    player.stats.time = totalTime;
+
+    await player.save();
 
     const statEntry = await PlayerStat.create({
       player: player._id,
@@ -127,8 +132,8 @@ const updatePlayerStats = async (req, res) => {
         id: player._id,
         username: player.username,
       },
-      stats: updatedPlayer.stats,
-      levelStats: updatedPlayer.levelStats,
+      stats: player.stats,
+      levelStats: player.levelStats,
       statEntry,
     });
   } catch (error) {
