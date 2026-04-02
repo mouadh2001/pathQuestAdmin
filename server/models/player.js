@@ -10,7 +10,8 @@ const playerSchema = new mongoose.Schema({
     level: { type: Number, default: 1 },
     correct: { type: Number, default: 0 },
     incorrect: { type: Number, default: 0 },
-    time: { type: Number, default: 0 }
+    time: { type: Number, default: 0 },
+    questionStats: { type: mongoose.Schema.Types.Mixed, default: {} }
   },
   createdAt: { type: Date, default: Date.now }
 });

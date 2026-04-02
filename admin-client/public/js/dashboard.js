@@ -118,6 +118,38 @@ function renderPlayerDetails(player) {
   }
 
   details.classList.remove("hidden");
+
+  let questionStatsHtml = "";
+  if (player.stats?.questionStats && Object.keys(player.stats.questionStats).length > 0) {
+    const rows = Object.entries(player.stats.questionStats)
+      .map(([qId, st]) => `
+        <tr>
+          <td>${qId}</td>
+          <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
+          <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
+        </tr>
+      `)
+      .join("");
+
+    questionStatsHtml = `
+      <div style="margin-top: 20px;">
+        <h3>Detailed Question Stats</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; text-align: left;">
+          <thead>
+            <tr style="border-bottom: 2px solid #ccc;">
+              <th style="padding: 8px;">Question ID</th>
+              <th style="padding: 8px;">Correct</th>
+              <th style="padding: 8px;">Incorrect</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
   content.innerHTML = `
     <dl>
       <dt>Username</dt><dd>${player.username}</dd>
@@ -129,6 +161,7 @@ function renderPlayerDetails(player) {
       <dt>Incorrect</dt><dd>${player.stats?.incorrect ?? 0}</dd>
       <dt>Time (s)</dt><dd>${player.stats?.time ?? 0}</dd>
     </dl>
+    ${questionStatsHtml}
   `;
 }
 

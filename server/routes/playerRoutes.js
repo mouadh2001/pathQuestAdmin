@@ -84,15 +84,24 @@ const updatePlayerStats = async (req, res) => {
       return res.status(404).json({ message: "Player not found" });
     }
 
+    const incQuery = {
+      "stats.score": Number(score) || 0,
+      "stats.correct": Number(correct) || 0,
+      "stats.incorrect": Number(incorrect) || 0,
+      "stats.time": Number(time) || 0,
+    };
+
+    if (questionStats && typeof questionStats === "object") {
+      for (const [qId, qData] of Object.entries(questionStats)) {
+        incQuery[`stats.questionStats.${qId}.correct`] = Number(qData.correct) || 0;
+        incQuery[`stats.questionStats.${qId}.wrong`] = Number(qData.wrong) || 0;
+      }
+    }
+
     const updatedPlayer = await Player.findByIdAndUpdate(
       req.player.id,
       {
-        $inc: {
-          "stats.score": Number(score) || 0,
-          "stats.correct": Number(correct) || 0,
-          "stats.incorrect": Number(incorrect) || 0,
-          "stats.time": Number(time) || 0,
-        },
+        $inc: incQuery,
       },
       { new: true },
     );
