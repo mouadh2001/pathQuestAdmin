@@ -77,7 +77,7 @@ router.get("/all", authMiddleware, async (req, res) => {
 ================================= */
 const updatePlayerStats = async (req, res) => {
   try {
-    const { score, correct, incorrect, time } = req.body;
+    const { score, correct, incorrect, time, questionStats = {} } = req.body;
     const player = await Player.findById(req.player.id).select("username");
 
     if (!player) {
@@ -104,6 +104,7 @@ const updatePlayerStats = async (req, res) => {
       correct: Number(correct) || 0,
       incorrect: Number(incorrect) || 0,
       time: Number(time) || 0,
+      questionStats,
     });
 
     res.json({

@@ -67,7 +67,7 @@ function renderPlayers() {
 
   const sortedPlayers = [...playersCache].sort((a, b) => {
     if (currentSortKey === "time") {
-      return (b.stats?.time || 0) - (a.stats?.time || 0);
+      return (a.stats?.time || 0) - (b.stats?.time || 0);
     }
     if (currentSortKey === "createdAt") {
       return new Date(b.createdAt) - new Date(a.createdAt);
