@@ -12,6 +12,13 @@ const playerStatSchema = new mongoose.Schema({
   correct: { type: Number, default: 0 },
   incorrect: { type: Number, default: 0 },
   time: { type: Number, default: 0 },
+  metrics: {
+    sessionDuration: { type: Number, default: 0 },
+    observationTime: { type: Number, default: 0 },
+    averageResponseTime: { type: Number, default: 0 },
+    firstTrySuccessCount: { type: Number, default: 0 },
+    levelAttempts: { type: Number, default: 1 }
+  },
   questionStats: { type: mongoose.Schema.Types.Mixed, default: {} },
   pushedAt: { type: Date, default: Date.now },
 });

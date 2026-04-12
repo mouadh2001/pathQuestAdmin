@@ -77,7 +77,7 @@ router.get("/all", authMiddleware, async (req, res) => {
 ================================= */
 const updatePlayerStats = async (req, res) => {
   try {
-    const { levelKey, score, correct, incorrect, time, questionStats = {} } = req.body;
+    const { levelKey, score, correct, incorrect, time, questionStats = {}, metrics = {} } = req.body;
     const player = await Player.findById(req.player.id);
 
     if (!player) {
@@ -92,26 +92,28 @@ const updatePlayerStats = async (req, res) => {
       correct: Number(correct) || 0,
       incorrect: Number(incorrect) || 0,
       time: Number(time) || 0,
+      metrics,
       questionStats
     });
 
     // Recalculate global stats to avoid unbounded accumulation
+    // Note: totalTime and totalSessions now incrementally grow based on the push event
+    // because replays shouldn't overwrite the global time spent playing.
     let totalScore = 0;
     let totalCorrect = 0;
     let totalIncorrect = 0;
-    let totalTime = 0;
 
     for (const data of player.levelStats.values()) {
       totalScore += data.score || 0;
       totalCorrect += data.correct || 0;
       totalIncorrect += data.incorrect || 0;
-      totalTime += data.time || 0;
     }
 
     player.stats.score = totalScore;
     player.stats.correct = totalCorrect;
     player.stats.incorrect = totalIncorrect;
-    player.stats.time = totalTime;
+    player.stats.time = (player.stats.time || 0) + (Number(metrics.sessionDuration) || Number(time) || 0);
+    player.stats.totalSessions = (player.stats.totalSessions || 0) + 1;
 
     await player.save();
 
@@ -123,6 +125,7 @@ const updatePlayerStats = async (req, res) => {
       correct: Number(correct) || 0,
       incorrect: Number(incorrect) || 0,
       time: Number(time) || 0,
+      metrics,
       questionStats,
     });
 
