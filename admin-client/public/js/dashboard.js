@@ -301,7 +301,7 @@ async function renderPlayerDetails(player) {
 
   // Draw Charts
   if (historyData.length > 0) {
-    const labelsTries = historyData.map((_, i) => \`T\${i+1}\`);
+    const labelsTries = historyData.map((_, i) => `T${i+1}`);
     const scoreData = historyData.map(h => h.score);
     const timeData = historyData.map(h => h.metrics?.averageResponseTime || 0);
     const labelsDates = historyData.map(h => new Date(h.pushedAt).toLocaleDateString());
