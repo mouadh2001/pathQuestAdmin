@@ -439,7 +439,7 @@ function exportPlayerToCSV(player, historyData) {
     "Taux de Succes (%)",
     "Temps Total (s)",
     "Temps Obs. Lames (s)",
-    "Temps Rép. Moyen (s)",
+    "Temps Rep. Moyen (s)",
     "Tentatives (Morts/Restarts)",
   ]
     .map(formatCell)
