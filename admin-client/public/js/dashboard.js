@@ -408,28 +408,29 @@ function exportPlayerToCSV(player, historyData) {
     return;
   }
 
-  // --- 1. Helper for Professional CSV Formatting ---
-  // Wraps text in quotes and escapes existing quotes to prevent file corruption
   const formatCell = (val) => {
     if (val === undefined || val === null) return '""';
-    let str = String(val).replace(/"/g, '""'); // Escape double quotes
+    let str = String(val).replace(/"/g, '""');
     return `"${str}"`;
   };
 
-  // --- 2. Create Metadata Header (Professional Touch) ---
   const now = new Date();
+
+  // --- NEW: Excel Separator Hint ---
+  // This line tells Excel to use the semicolon as the column divider
+  const excelHint = "sep=;\n";
+
   const metadata = [
     [`RAPPORT DE PERFORMANCE ETUDIANT`],
     [`Etudiant`, player.username],
     [`Email`, player.email],
     [`Date d'export`, now.toLocaleString()],
     [`Nombre de sessions`, historyData.length],
-    [], // Empty line separator
+    [],
   ]
     .map((row) => row.map(formatCell).join(";"))
     .join("\n");
 
-  // --- 3. Define Table Headers ---
   const headers = [
     "Date/Heure",
     "Niveau",
@@ -444,7 +445,6 @@ function exportPlayerToCSV(player, historyData) {
     .map(formatCell)
     .join(";");
 
-  // --- 4. Process Rows with Calculated Analytics ---
   const rows = historyData
     .map((h) => {
       const metrics = h.metrics || {};
@@ -454,7 +454,7 @@ function exportPlayerToCSV(player, historyData) {
           ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1)
           : "0";
 
-      const columns = [
+      return [
         new Date(h.pushedAt).toLocaleString(),
         h.levelKey || "N/A",
         h.score || 0,
@@ -464,14 +464,16 @@ function exportPlayerToCSV(player, historyData) {
         metrics.observationTime || 0,
         metrics.averageResponseTime || 0,
         metrics.levelAttempts || 1,
-      ];
-
-      return columns.map(formatCell).join(";");
+      ]
+        .map(formatCell)
+        .join(";");
     })
     .join("\n");
 
-  // --- 5. Final Assembly and Download ---
-  const csvContent = "\uFEFF" + metadata + "\n" + headers + "\n" + rows;
+  // Combine everything: BOM + Hint + Metadata + Headers + Rows
+  const csvContent =
+    "\uFEFF" + excelHint + metadata + "\n" + headers + "\n" + rows;
+
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
@@ -480,8 +482,6 @@ function exportPlayerToCSV(player, historyData) {
 
   link.setAttribute("href", url);
   link.setAttribute("download", fileName);
-  link.style.visibility = "hidden";
-
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
