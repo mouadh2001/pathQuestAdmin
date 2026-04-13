@@ -130,7 +130,7 @@ async function renderPlayerDetails(player) {
       const json = await res.json();
       historyData = json.history || [];
     }
-  } catch(e) {
+  } catch (e) {
     console.error("Error fetching history");
   }
 
@@ -138,9 +138,16 @@ async function renderPlayerDetails(player) {
   let globalQuestionsAnswered = 0;
 
   let firstScore = historyData.length > 0 ? historyData[0].score : 0;
-  let lastScore = historyData.length > 0 ? historyData[historyData.length - 1].score : 0;
-  let tauxAmelioration = firstScore > 0 ? (((lastScore - firstScore) / firstScore) * 100).toFixed(1) : 0;
-  let vitesseApprentissage = historyData.length > 1 ? ((lastScore - firstScore) / (historyData.length - 1)).toFixed(1) : 0;
+  let lastScore =
+    historyData.length > 0 ? historyData[historyData.length - 1].score : 0;
+  let tauxAmelioration =
+    firstScore > 0
+      ? (((lastScore - firstScore) / firstScore) * 100).toFixed(1)
+      : 0;
+  let vitesseApprentissage =
+    historyData.length > 1
+      ? ((lastScore - firstScore) / (historyData.length - 1)).toFixed(1)
+      : 0;
 
   // Fréquence
   let freqSessions = "Non calculable";
@@ -149,52 +156,60 @@ async function renderPlayerDetails(player) {
     const lastDate = new Date(historyData[historyData.length - 1].pushedAt);
     const diffWeeks = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 7);
     if (diffWeeks > 0.01) {
-      freqSessions = (historyData.length / diffWeeks).toFixed(1) + " sessions/semaine";
+      freqSessions =
+        (historyData.length / diffWeeks).toFixed(1) + " sessions/semaine";
     } else {
       freqSessions = historyData.length + " sessions (moins d'1 semaine)";
     }
   } else if (historyData.length === 1) {
-      freqSessions = "1 session unique";
+    freqSessions = "1 session unique";
   }
 
   // Correlation calculation (Pearson loosely) on history (Time spent vs Score)
   let correlationMsg = "Non calculable (trop peu de données)";
   if (historyData.length > 2) {
-      // array of x (time), y (score)
-      const X = historyData.map(h => (h.metrics?.observationTime || 0));
-      const Y = historyData.map(h => h.score || 0);
-      const sumX = X.reduce((a,b)=>a+b, 0);
-      const sumY = Y.reduce((a,b)=>a+b, 0);
-      const sumXY = X.reduce((a,b,i) => a + (b * Y[i]), 0);
-      const sumX2 = X.reduce((a,b)=>a+(b*b), 0);
-      const sumY2 = Y.reduce((a,b)=>a+(b*b), 0);
-      const n = historyData.length;
-      const numerator = (n * sumXY) - (sumX * sumY);
-      const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
-      if (denominator !== 0) {
-          const r = (numerator / denominator);
-          if (r > 0.5) correlationMsg = `Forte (r=${r.toFixed(2)})`;
-          else if (r > 0.1) correlationMsg = `Positive Faible (r=${r.toFixed(2)})`;
-          else if (r > -0.1) correlationMsg = `Nulle (r=${r.toFixed(2)})`;
-          else correlationMsg = `Négative (r=${r.toFixed(2)})`;
-      }
+    // array of x (time), y (score)
+    const X = historyData.map((h) => h.metrics?.observationTime || 0);
+    const Y = historyData.map((h) => h.score || 0);
+    const sumX = X.reduce((a, b) => a + b, 0);
+    const sumY = Y.reduce((a, b) => a + b, 0);
+    const sumXY = X.reduce((a, b, i) => a + b * Y[i], 0);
+    const sumX2 = X.reduce((a, b) => a + b * b, 0);
+    const sumY2 = Y.reduce((a, b) => a + b * b, 0);
+    const n = historyData.length;
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt(
+      (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY),
+    );
+    if (denominator !== 0) {
+      const r = numerator / denominator;
+      if (r > 0.5) correlationMsg = `Forte (r=${r.toFixed(2)})`;
+      else if (r > 0.1) correlationMsg = `Positive Faible (r=${r.toFixed(2)})`;
+      else if (r > -0.1) correlationMsg = `Nulle (r=${r.toFixed(2)})`;
+      else correlationMsg = `Négative (r=${r.toFixed(2)})`;
+    }
   }
 
   let levelStatsHtml = "";
   if (player.levelStats && Object.keys(player.levelStats).length > 0) {
     for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
       let questionStatsHtml = "";
-      if (levelData.questionStats && Object.keys(levelData.questionStats).length > 0) {
+      if (
+        levelData.questionStats &&
+        Object.keys(levelData.questionStats).length > 0
+      ) {
         const rows = Object.entries(levelData.questionStats)
-          .map(([qId, st]) => `
+          .map(
+            ([qId, st]) => `
             <tr>
               <td>${qId}</td>
               <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
               <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
-              <td>${st.firstTrySuccess ? '✅ Oui' : '❌ Non'}</td>
-              <td>${st.timeSpent ? st.timeSpent + 's' : '-'}</td>
+              <td>${st.firstTrySuccess ? "✅ Oui" : "❌ Non"}</td>
+              <td>${st.timeSpent ? st.timeSpent + "s" : "-"}</td>
             </tr>
-          `)
+          `,
+          )
           .join("");
 
         questionStatsHtml = `
@@ -221,9 +236,10 @@ async function renderPlayerDetails(player) {
       globalFirstTryCount += firstTryCount;
       globalQuestionsAnswered += totalQuestions;
 
-      const successRate = totalQuestions > 0 
-           ? Math.round((firstTryCount / totalQuestions) * 100) 
-           : 0;
+      const successRate =
+        totalQuestions > 0
+          ? Math.round((firstTryCount / totalQuestions) * 100)
+          : 0;
 
       levelStatsHtml += `
         <div style="margin-top: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 5px;">
@@ -262,11 +278,17 @@ async function renderPlayerDetails(player) {
       `;
     }
   } else {
-    levelStatsHtml = "<p style='margin-top: 15px; color: #6b7280;'>No level-specific stats recorded yet.</p>";
+    levelStatsHtml =
+      "<p style='margin-top: 15px; color: #6b7280;'>No level-specific stats recorded yet.</p>";
   }
 
-  const globalSuccessRate = globalQuestionsAnswered > 0 ? Math.round((globalFirstTryCount / globalQuestionsAnswered) * 100) : 0;
-  const averageSessionTime = player.stats?.totalSessions ? Math.round(player.stats.time / player.stats.totalSessions) : 0;
+  const globalSuccessRate =
+    globalQuestionsAnswered > 0
+      ? Math.round((globalFirstTryCount / globalQuestionsAnswered) * 100)
+      : 0;
+  const averageSessionTime = player.stats?.totalSessions
+    ? Math.round(player.stats.time / player.stats.totalSessions)
+    : 0;
 
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -308,45 +330,56 @@ async function renderPlayerDetails(player) {
   // Export button logic
   const exportBtn = document.getElementById("exportCsvBtn");
   if (exportBtn) {
-    exportBtn.addEventListener("click", () => exportPlayerToCSV(player, historyData));
+    exportBtn.addEventListener("click", () =>
+      exportPlayerToCSV(player, historyData),
+    );
   }
 
   // Draw Charts
   if (historyData.length > 0) {
-    const labelsTries = historyData.map((_, i) => `T${i+1}`);
-    const scoreData = historyData.map(h => h.score);
-    const timeData = historyData.map(h => h.metrics?.averageResponseTime || 0);
-    const labelsDates = historyData.map(h => new Date(h.pushedAt).toLocaleDateString());
+    const labelsTries = historyData.map((_, i) => `T${i + 1}`);
+    const scoreData = historyData.map((h) => h.score);
+    const timeData = historyData.map(
+      (h) => h.metrics?.averageResponseTime || 0,
+    );
+    const labelsDates = historyData.map((h) =>
+      new Date(h.pushedAt).toLocaleDateString(),
+    );
 
     new Chart(document.getElementById("scoreVsTryChart"), {
-      type: 'line',
+      type: "line",
       data: {
         labels: labelsTries,
-        datasets: [{
-          label: 'Score vs Tentative (Progression)',
-          data: scoreData,
-          borderColor: '#10b981',
-          tension: 0.1
-        }]
-      }
+        datasets: [
+          {
+            label: "Score vs Tentative (Progression)",
+            data: scoreData,
+            borderColor: "#10b981",
+            tension: 0.1,
+          },
+        ],
+      },
     });
 
     new Chart(document.getElementById("timeVsDayChart"), {
-      type: 'line',
+      type: "line",
       data: {
         labels: labelsDates,
-        datasets: [{
-          label: 'Temps de Rép. Moyen (s)',
-          data: timeData,
-          borderColor: '#3b82f6',
-          tension: 0.1
-        }, {
-           label: 'Score Global',
-           data: scoreData,
-           borderColor: '#8b5cf6',
-           tension: 0.1
-        }]
-      }
+        datasets: [
+          {
+            label: "Temps de Rép. Moyen (s)",
+            data: timeData,
+            borderColor: "#3b82f6",
+            tension: 0.1,
+          },
+          {
+            label: "Score Global",
+            data: scoreData,
+            borderColor: "#8b5cf6",
+            tension: 0.1,
+          },
+        ],
+      },
     });
   }
 }
@@ -371,62 +404,88 @@ window.onload = () => {
 
 function exportPlayerToCSV(player, historyData) {
   if (!historyData || historyData.length === 0) {
-    alert("Aucune donnée d'historique (sessions) disponible pour cet étudiant.");
+    alert("Aucune donnée d'historique disponible pour cet étudiant.");
     return;
   }
 
-  const headers = [
-    "Date", "Pseudo", "Niveau", "Score", "Temps_Jeu(s)", 
-    "Correct", "Incorrect", "Succes_1er_coup", 
-    "Temps_Observation(s)", "Temps_Reponse_Moyen(s)", "Morts_Restart"
-  ];
-
-  // Helper to escape semicolons or newlines in data
-  const clean = (val) => {
-    if (val === undefined || val === null) return "";
-    return String(val).replace(/;/g, ",").replace(/\n/g, " ");
+  // --- 1. Helper for Professional CSV Formatting ---
+  // Wraps text in quotes and escapes existing quotes to prevent file corruption
+  const formatCell = (val) => {
+    if (val === undefined || val === null) return '""';
+    let str = String(val).replace(/"/g, '""'); // Escape double quotes
+    return `"${str}"`;
   };
 
-  const rows = historyData.map(h => {
-    const dateStr = new Date(h.pushedAt).toLocaleString().replace(/,/g, ' ');
-    const metrics = h.metrics || {};
-    
-    return [
-      dateStr,
-      clean(player.username),
-      clean(h.levelKey || "N/A"),
-      h.score || 0,
-      h.time || 0,
-      h.correct || 0,
-      h.incorrect || 0,
-      metrics.firstTrySuccessCount || 0,
-      metrics.observationTime || 0,
-      metrics.averageResponseTime || 0,
-      metrics.levelAttempts || 1
-    ].join(";");
-  });
+  // --- 2. Create Metadata Header (Professional Touch) ---
+  const now = new Date();
+  const metadata = [
+    [`RAPPORT DE PERFORMANCE ETUDIANT`],
+    [`Etudiant`, player.username],
+    [`Email`, player.email],
+    [`Date d'export`, now.toLocaleString()],
+    [`Nombre de sessions`, historyData.length],
+    [], // Empty line separator
+  ]
+    .map((row) => row.map(formatCell).join(";"))
+    .join("\n");
 
-  // 1. Use the actual UTF-8 BOM character
-  // 2. Use real newline characters \n
-  const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
-  
-  // Create the blob with explicit encoding
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // --- 3. Define Table Headers ---
+  const headers = [
+    "Date/Heure",
+    "Niveau",
+    "Score",
+    "Réussite (1er coup)",
+    "Taux de Succès (%)",
+    "Temps Total (s)",
+    "Temps Obs. Lames (s)",
+    "Temps Rép. Moyen (s)",
+    "Tentatives (Morts/Restarts)",
+  ]
+    .map(formatCell)
+    .join(";");
+
+  // --- 4. Process Rows with Calculated Analytics ---
+  const rows = historyData
+    .map((h) => {
+      const metrics = h.metrics || {};
+      const totalQ = (h.correct || 0) + (h.incorrect || 0);
+      const successRate =
+        totalQ > 0
+          ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1)
+          : "0";
+
+      const columns = [
+        new Date(h.pushedAt).toLocaleString(),
+        h.levelKey || "N/A",
+        h.score || 0,
+        `${metrics.firstTrySuccessCount || 0} / ${totalQ}`,
+        `${successRate}%`,
+        h.time || 0,
+        metrics.observationTime || 0,
+        metrics.averageResponseTime || 0,
+        metrics.levelAttempts || 1,
+      ];
+
+      return columns.map(formatCell).join(";");
+    })
+    .join("\n");
+
+  // --- 5. Final Assembly and Download ---
+  const csvContent = "\uFEFF" + metadata + "\n" + headers + "\n" + rows;
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement("a");
-  const fileName = `Export_Stats_${player.username || 'player'}_${Date.now()}.csv`;
-  
+  const fileName = `Rapport_${player.username.replace(/\s+/g, "_")}_${now.getTime()}.csv`;
+
   link.setAttribute("href", url);
   link.setAttribute("download", fileName);
-  link.style.visibility = 'hidden';
-  
+  link.style.visibility = "hidden";
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
-  // Clean up the URL object to free memory
+
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
-
 window.createPlayer = createPlayer;
