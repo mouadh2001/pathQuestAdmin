@@ -396,11 +396,11 @@ function exportPlayerToCSV(player, historyData) {
       metrics.observationTime || 0,
       metrics.averageResponseTime || 0,
       metrics.levelAttempts || 1
-    ].join(",");
+    ].join(";");
   });
 
   // Adding BOM for excel UTF-8 compatibility
-  const csvContent = "\\uFEFF" + [headers.join(","), ...rows].join("\\n");
+  const csvContent = "\\uFEFF" + [headers.join(";"), ...rows].join("\\n");
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   
