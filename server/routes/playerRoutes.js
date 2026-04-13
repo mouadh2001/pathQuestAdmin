@@ -73,6 +73,21 @@ router.get("/all", authMiddleware, async (req, res) => {
 });
 
 /* ===============================
+   GET PLAYER HISTORY (Admin Only)
+================================= */
+router.get("/admin/player/:id/history", authMiddleware, async (req, res) => {
+  try {
+    const history = await PlayerStat.find({ player: req.params.id })
+      .sort({ pushedAt: 1 }) // Oldest first for progressing charts
+      .lean();
+    res.json({ history });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error fetching player history" });
+  }
+});
+
+/* ===============================
    UPDATE PLAYER STATS
 ================================= */
 const updatePlayerStats = async (req, res) => {

@@ -55,13 +55,13 @@ async function loadPlayers() {
     const players = await res.json();
     playersCache = Array.isArray(players) ? players : [];
 
-    renderPlayers();
+    await renderPlayers();
   } catch (err) {
     console.error(err);
   }
 }
 
-function renderPlayers() {
+async function renderPlayers() {
   const tbody = document.getElementById("playersTable");
   tbody.innerHTML = "";
 
@@ -96,18 +96,18 @@ function renderPlayers() {
 
   if (selectedPlayerId) {
     const selectedPlayer = playersCache.find((p) => p._id === selectedPlayerId);
-    renderPlayerDetails(selectedPlayer);
+    await renderPlayerDetails(selectedPlayer);
   } else {
-    renderPlayerDetails(null);
+    await renderPlayerDetails(null);
   }
 }
 
-function selectPlayer(id) {
+async function selectPlayer(id) {
   selectedPlayerId = id;
-  renderPlayers();
+  await renderPlayers();
 }
 
-function renderPlayerDetails(player) {
+async function renderPlayerDetails(player) {
   const details = document.getElementById("playerDetails");
   const content = document.getElementById("detailsContent");
 
@@ -118,6 +118,67 @@ function renderPlayerDetails(player) {
   }
 
   details.classList.remove("hidden");
+
+  // Fetch History for advanced charts and metrics
+  let historyData = [];
+  try {
+    const token = getToken();
+    const res = await fetch(`${API_URL}/admin/player/${player._id}/history`, {
+      headers: { Authorization: token },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      historyData = json.history || [];
+    }
+  } catch(e) {
+    console.error("Error fetching history");
+  }
+
+  let globalFirstTryCount = 0;
+  let globalQuestionsAnswered = 0;
+
+  let firstScore = historyData.length > 0 ? historyData[0].score : 0;
+  let lastScore = historyData.length > 0 ? historyData[historyData.length - 1].score : 0;
+  let tauxAmelioration = firstScore > 0 ? (((lastScore - firstScore) / firstScore) * 100).toFixed(1) : 0;
+  let vitesseApprentissage = historyData.length > 1 ? ((lastScore - firstScore) / (historyData.length - 1)).toFixed(1) : 0;
+
+  // Fréquence
+  let freqSessions = "Non calculable";
+  if (historyData.length > 1) {
+    const firstDate = new Date(historyData[0].pushedAt);
+    const lastDate = new Date(historyData[historyData.length - 1].pushedAt);
+    const diffWeeks = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 7);
+    if (diffWeeks > 0.01) {
+      freqSessions = (historyData.length / diffWeeks).toFixed(1) + " sessions/semaine";
+    } else {
+      freqSessions = historyData.length + " sessions (moins d'1 semaine)";
+    }
+  } else if (historyData.length === 1) {
+      freqSessions = "1 session unique";
+  }
+
+  // Correlation calculation (Pearson loosely) on history (Time spent vs Score)
+  let correlationMsg = "Non calculable (trop peu de données)";
+  if (historyData.length > 2) {
+      // array of x (time), y (score)
+      const X = historyData.map(h => (h.metrics?.observationTime || 0));
+      const Y = historyData.map(h => h.score || 0);
+      const sumX = X.reduce((a,b)=>a+b, 0);
+      const sumY = Y.reduce((a,b)=>a+b, 0);
+      const sumXY = X.reduce((a,b,i) => a + (b * Y[i]), 0);
+      const sumX2 = X.reduce((a,b)=>a+(b*b), 0);
+      const sumY2 = Y.reduce((a,b)=>a+(b*b), 0);
+      const n = historyData.length;
+      const numerator = (n * sumXY) - (sumX * sumY);
+      const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+      if (denominator !== 0) {
+          const r = (numerator / denominator);
+          if (r > 0.5) correlationMsg = `Forte (r=${r.toFixed(2)})`;
+          else if (r > 0.1) correlationMsg = `Positive Faible (r=${r.toFixed(2)})`;
+          else if (r > -0.1) correlationMsg = `Nulle (r=${r.toFixed(2)})`;
+          else correlationMsg = `Négative (r=${r.toFixed(2)})`;
+      }
+  }
 
   let levelStatsHtml = "";
   if (player.levelStats && Object.keys(player.levelStats).length > 0) {
@@ -130,7 +191,7 @@ function renderPlayerDetails(player) {
               <td>${qId}</td>
               <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
               <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
-              <td>${st.firstTrySuccess ? '✅ Yes' : '❌ No'}</td>
+              <td>${st.firstTrySuccess ? '✅ Oui' : '❌ Non'}</td>
               <td>${st.timeSpent ? st.timeSpent + 's' : '-'}</td>
             </tr>
           `)
@@ -155,8 +216,13 @@ function renderPlayerDetails(player) {
       }
 
       const metrics = levelData.metrics || {};
-      const successRate = levelData.correct > 0 || levelData.incorrect > 0 
-           ? Math.round((levelData.correct / (levelData.correct + levelData.incorrect)) * 100) 
+      const totalQuestions = metrics.totalQuestionsAnswered || 0;
+      const firstTryCount = metrics.firstTrySuccessCount || 0;
+      globalFirstTryCount += firstTryCount;
+      globalQuestionsAnswered += totalQuestions;
+
+      const successRate = totalQuestions > 0 
+           ? Math.round((firstTryCount / totalQuestions) * 100) 
            : 0;
 
       levelStatsHtml += `
@@ -168,8 +234,8 @@ function renderPlayerDetails(player) {
               <h4 style="margin: 0 0 5px 0; color: #9d174d;">Performance Académique</h4>
               <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
                 <li>Score: <strong>${levelData.score || 0}</strong></li>
-                <li>Taux de réussite global: <strong>${successRate}%</strong></li>
-                <li>Questions réussies (du 1er coup): <strong>${metrics.firstTrySuccessCount || 0}</strong></li>
+                <li>Taux de réussite par niveau (1er coup): <strong>${successRate}%</strong></li>
+                <li>Questions réussies (du 1er coup) / Totales: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
               </ul>
             </div>
             
@@ -185,7 +251,7 @@ function renderPlayerDetails(player) {
               <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
                 <li>Temps d'observation Lames: <strong>${metrics.observationTime || 0}s</strong></li>
                 <li>Temps de réponse (moyenne): <strong>${metrics.averageResponseTime || 0}s</strong></li>
-                <li>Durée de la session de jeu: <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
+                <li>Temps par niveau (Session): <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
               </ul>
             </div>
           </div>
@@ -199,25 +265,83 @@ function renderPlayerDetails(player) {
     levelStatsHtml = "<p style='margin-top: 15px; color: #6b7280;'>No level-specific stats recorded yet.</p>";
   }
 
+  const globalSuccessRate = globalQuestionsAnswered > 0 ? Math.round((globalFirstTryCount / globalQuestionsAnswered) * 100) : 0;
+  const averageSessionTime = player.stats?.totalSessions ? Math.round(player.stats.time / player.stats.totalSessions) : 0;
+
   content.innerHTML = `
     <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; background: #fafafa; padding: 10px; border-radius: 5px;">
       <dt style="font-weight: bold;">Username</dt><dd style="margin-left: 0;">${player.username}</dd>
       <dt style="font-weight: bold;">Email</dt><dd style="margin-left: 0;">${player.email}</dd>
-      <dt style="font-weight: bold;">Created At</dt><dd style="margin-left: 0;">${new Date(player.createdAt).toLocaleString()}</dd>
-      <dt style="font-weight: bold;">Total Sessions Played</dt><dd style="margin-left: 0;">${player.stats?.totalSessions ?? 0}</dd>
-      <dt style="font-weight: bold;">Total Score</dt><dd style="margin-left: 0; color: green;">${player.stats?.score ?? 0}</dd>
-      <dt style="font-weight: bold;">Total Time (Global)</dt><dd style="margin-left: 0;">${player.stats?.time ?? 0}s</dd>
+      <dt style="font-weight: bold;">Taux de réussite global (1er coup)</dt><dd style="margin-left: 0; color: green; font-weight: bold;">${globalSuccessRate}%</dd>
+      <dt style="font-weight: bold;">Taux d'amélioration</dt><dd style="margin-left: 0;">${tauxAmelioration}%</dd>
+      <dt style="font-weight: bold;">Vitesse d'apprentissage</dt><dd style="margin-left: 0;">${vitesseApprentissage} pts/session</dd>
+      <dt style="font-weight: bold;">Durée de jeu totale</dt><dd style="margin-left: 0;">${player.stats?.time ?? 0}s</dd>
+      <dt style="font-weight: bold;">Durée moy. par session</dt><dd style="margin-left: 0;">${averageSessionTime}s</dd>
+      <dt style="font-weight: bold;">Fréquence des sessions</dt><dd style="margin-left: 0;">${freqSessions}</dd>
+      <dt style="font-weight: bold;">Corrélation (Temps Obs. / Score)</dt><dd style="margin-left: 0;">${correlationMsg}</dd>
     </dl>
+    
+    <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-top: 20px; margin-bottom: 20px;">
+      <h3 style="margin-top: 0;">Graphiques Analytics (Chart.js)</h3>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+           <canvas id="scoreVsTryChart"></canvas>
+        </div>
+        <div style="flex: 1; min-width: 300px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+           <canvas id="timeVsDayChart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div style="border-top: 2px solid #ccc; padding-top: 15px;">
       <h3 style="margin-top: 0;">Détails par Niveau</h3>
       ${levelStatsHtml}
     </div>
   `;
+
+  // Draw Charts
+  if (historyData.length > 0) {
+    const labelsTries = historyData.map((_, i) => \`T\${i+1}\`);
+    const scoreData = historyData.map(h => h.score);
+    const timeData = historyData.map(h => h.metrics?.averageResponseTime || 0);
+    const labelsDates = historyData.map(h => new Date(h.pushedAt).toLocaleDateString());
+
+    new Chart(document.getElementById("scoreVsTryChart"), {
+      type: 'line',
+      data: {
+        labels: labelsTries,
+        datasets: [{
+          label: 'Score vs Tentative (Progression)',
+          data: scoreData,
+          borderColor: '#10b981',
+          tension: 0.1
+        }]
+      }
+    });
+
+    new Chart(document.getElementById("timeVsDayChart"), {
+      type: 'line',
+      data: {
+        labels: labelsDates,
+        datasets: [{
+          label: 'Temps de Rép. Moyen (s)',
+          data: timeData,
+          borderColor: '#3b82f6',
+          tension: 0.1
+        }, {
+           label: 'Score Global',
+           data: scoreData,
+           borderColor: '#8b5cf6',
+           tension: 0.1
+        }]
+      }
+    });
+  }
 }
 
-function setSort(key) {
+async function setSort(key) {
   currentSortKey = key;
-  renderPlayers();
+  await renderPlayers();
 }
 
 window.onload = () => {
