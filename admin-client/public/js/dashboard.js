@@ -381,13 +381,20 @@ function exportPlayerToCSV(player, historyData) {
     "Temps_Observation(s)", "Temps_Reponse_Moyen(s)", "Morts_Restart"
   ];
 
+  // Helper to escape semicolons or newlines in data
+  const clean = (val) => {
+    if (val === undefined || val === null) return "";
+    return String(val).replace(/;/g, ",").replace(/\n/g, " ");
+  };
+
   const rows = historyData.map(h => {
     const dateStr = new Date(h.pushedAt).toLocaleString().replace(/,/g, ' ');
     const metrics = h.metrics || {};
+    
     return [
       dateStr,
-      player.username || "",
-      h.levelKey || "N/A",
+      clean(player.username),
+      clean(h.levelKey || "N/A"),
       h.score || 0,
       h.time || 0,
       h.correct || 0,
@@ -399,18 +406,27 @@ function exportPlayerToCSV(player, historyData) {
     ].join(";");
   });
 
-  // Adding BOM for excel UTF-8 compatibility
-  const csvContent = "\\uFEFF" + [headers.join(";"), ...rows].join("\\n");
+  // 1. Use the actual UTF-8 BOM character
+  // 2. Use real newline characters \n
+  const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
+  
+  // Create the blob with explicit encoding
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   
   const link = document.createElement("a");
-  const fileName = `Export_Stats_${player.username}_${new Date().getTime()}.csv`;
+  const fileName = `Export_Stats_${player.username || 'player'}_${Date.now()}.csv`;
+  
   link.setAttribute("href", url);
   link.setAttribute("download", fileName);
+  link.style.visibility = 'hidden';
+  
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  
+  // Clean up the URL object to free memory
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 window.createPlayer = createPlayer;
