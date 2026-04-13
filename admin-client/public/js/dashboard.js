@@ -269,6 +269,12 @@ async function renderPlayerDetails(player) {
   const averageSessionTime = player.stats?.totalSessions ? Math.round(player.stats.time / player.stats.totalSessions) : 0;
 
   content.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Aperçu Global</h3>
+      <button id="exportCsvBtn" style="padding: 8px 15px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+        📥 Exporter CSV (Historique)
+      </button>
+    </div>
     <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; background: #fafafa; padding: 10px; border-radius: 5px;">
       <dt style="font-weight: bold;">Username</dt><dd style="margin-left: 0;">${player.username}</dd>
       <dt style="font-weight: bold;">Email</dt><dd style="margin-left: 0;">${player.email}</dd>
@@ -298,6 +304,12 @@ async function renderPlayerDetails(player) {
       ${levelStatsHtml}
     </div>
   `;
+
+  // Export button logic
+  const exportBtn = document.getElementById("exportCsvBtn");
+  if (exportBtn) {
+    exportBtn.addEventListener("click", () => exportPlayerToCSV(player, historyData));
+  }
 
   // Draw Charts
   if (historyData.length > 0) {
@@ -356,5 +368,49 @@ window.onload = () => {
     .addEventListener("click", () => setSort("createdAt"));
   loadPlayers();
 };
+
+function exportPlayerToCSV(player, historyData) {
+  if (!historyData || historyData.length === 0) {
+    alert("Aucune donnée d'historique (sessions) disponible pour cet étudiant.");
+    return;
+  }
+
+  const headers = [
+    "Date", "Pseudo", "Niveau", "Score", "Temps_Jeu(s)", 
+    "Correct", "Incorrect", "Succes_1er_coup", 
+    "Temps_Observation(s)", "Temps_Reponse_Moyen(s)", "Morts_Restart"
+  ];
+
+  const rows = historyData.map(h => {
+    const dateStr = new Date(h.pushedAt).toLocaleString().replace(/,/g, ' ');
+    const metrics = h.metrics || {};
+    return [
+      dateStr,
+      player.username || "",
+      h.levelKey || "N/A",
+      h.score || 0,
+      h.time || 0,
+      h.correct || 0,
+      h.incorrect || 0,
+      metrics.firstTrySuccessCount || 0,
+      metrics.observationTime || 0,
+      metrics.averageResponseTime || 0,
+      metrics.levelAttempts || 1
+    ].join(",");
+  });
+
+  // Adding BOM for excel UTF-8 compatibility
+  const csvContent = "\\uFEFF" + [headers.join(","), ...rows].join("\\n");
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement("a");
+  const fileName = `Export_Stats_${player.username}_${new Date().getTime()}.csv`;
+  link.setAttribute("href", url);
+  link.setAttribute("download", fileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 window.createPlayer = createPlayer;
