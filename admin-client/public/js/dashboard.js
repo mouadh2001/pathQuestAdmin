@@ -737,6 +737,58 @@ async function exportGlobalExcel() {
     }
   });
 
+  // --- SHEET 4: QUESTION PERFORMANCE ---
+  const ws4 = workbook.addWorksheet('Question Performance');
+  ws4.columns = [
+    { header: 'Level', key: 'level', width: 15 },
+    { header: 'Question ID', key: 'qId', width: 20 },
+    { header: 'Attempted By (Players)', key: 'attempted', width: 25 },
+    { header: 'Correct Answers (Final)', key: 'correct', width: 25 },
+    { header: '1st Try Successes', key: 'firstTry', width: 20 }
+  ];
+  
+  styleHeaderRow(ws4.getRow(1));
+  
+  const levelAggs = {};
+  
+  playersCache.forEach((p) => {
+    if (p.levelStats) {
+      for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
+        if (!levelAggs[levelKey]) {
+          levelAggs[levelKey] = {
+            questions: {}
+          };
+        }
+        if (lStats.questionStats) {
+          for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
+            if (!levelAggs[levelKey].questions[qId]) {
+              levelAggs[levelKey].questions[qId] = { attemptedBy: 0, correctAnswers: 0, firstTrySuccesses: 0 };
+            }
+            levelAggs[levelKey].questions[qId].attemptedBy += 1;
+            if (qStat.correct > 0) {
+              levelAggs[levelKey].questions[qId].correctAnswers += 1;
+            }
+            if (qStat.firstTrySuccess) {
+              levelAggs[levelKey].questions[qId].firstTrySuccesses += 1;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  for (const [lvl, data] of Object.entries(levelAggs)) {
+    for (const [qId, counts] of Object.entries(data.questions)) {
+      ws4.addRow({
+        level: lvl.toUpperCase(),
+        qId: qId,
+        attempted: counts.attemptedBy,
+        correct: counts.correctAnswers,
+        firstTry: counts.firstTrySuccesses
+      });
+    }
+  }
+
   // --- DOWNLOAD ---
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
