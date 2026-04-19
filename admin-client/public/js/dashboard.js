@@ -637,87 +637,115 @@ function renderGlobalStats(players) {
   `;
 }
 
-function exportGlobalExcel() {
+/**
+ * Exports player data to a professional, styled Excel workbook.
+ * Requires: https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js
+ */
+async function exportGlobalExcel() {
   if (!playersCache || playersCache.length === 0) {
     alert("No player data available.");
     return;
   }
 
-  // Use SheetJS (XLSX) to create a workbook
-  const wb = XLSX.utils.book_new();
+  // 1. Initialize Workbook
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'PathQuest System';
+  workbook.created = new Date();
 
-  // Sheet 1: Cohort Summary
-  let totalScore = 0;
-  let totalTime = 0;
-  let totalCorrect = 0;
-  let totalIncorrect = 0;
+  // Helper function to style headers
+  const styleHeaderRow = (row) => {
+    row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
+    row.alignment = { vertical: 'middle', horizontal: 'center' };
+    row.height = 25;
+  };
+
+  // --- SHEET 1: COHORT SUMMARY ---
+  const ws1 = workbook.addWorksheet('Cohort Summary');
+  ws1.columns = [{ key: 'metric', width: 30 }, { key: 'value', width: 25 }];
   
-  playersCache.forEach((p) => {
-    totalScore += p.stats?.score || 0;
-    totalTime += p.stats?.time || 0;
-    totalCorrect += p.stats?.correct || 0;
-    totalIncorrect += p.stats?.incorrect || 0;
+  const totalScore = playersCache.reduce((sum, p) => sum + (p.stats?.score || 0), 0);
+  const totalCorrect = playersCache.reduce((sum, p) => sum + (p.stats?.correct || 0), 0);
+  const totalIncorrect = playersCache.reduce((sum, p) => sum + (p.stats?.incorrect || 0), 0);
+  
+  ws1.addRow(['GLOBAL COHORT SUMMARY']).font = { size: 16, bold: true };
+  ws1.addRow(['Export Date', new Date().toLocaleString()]);
+  ws1.addRow([]);
+  
+  const summaryData = [
+    ['Metric', 'Value'],
+    ['Total Players', playersCache.length],
+    ['Avg Global Score', (totalScore / playersCache.length).toFixed(1)],
+    ['Global Success Rate', totalCorrect + totalIncorrect > 0 ? ((totalCorrect / (totalCorrect + totalIncorrect)) * 100).toFixed(1) + '%' : '0%']
+  ];
+  
+  summaryData.forEach((r, i) => {
+    const row = ws1.addRow(r);
+    if (i === 0) styleHeaderRow(row);
   });
-  const totalTotal = totalCorrect + totalIncorrect;
-  const globalSuccessRate = totalTotal > 0 ? ((totalCorrect / totalTotal) * 100).toFixed(1) : 0;
 
-  const abstractData = [
-    ["GLOBAL COHORT SUMMARY"],
-    [],
-    ["Export Date", new Date().toLocaleString()],
-    ["Total Players", playersCache.length],
-    ["Average Global Score", (totalScore / playersCache.length).toFixed(1)],
-    ["Average Global Time (s)", (totalTime / playersCache.length).toFixed(1)],
-    ["Global Success Rate", `${globalSuccessRate}%`]
+  // --- SHEET 2: PLAYER DATA ---
+  const ws2 = workbook.addWorksheet('Player Data');
+  ws2.columns = [
+    { header: 'ID', key: 'id', width: 15 },
+    { header: 'Username', key: 'username', width: 20 },
+    { header: 'Email', key: 'email', width: 25 },
+    { header: 'Reg. Date', key: 'date', width: 15 },
+    { header: 'Total Score', key: 'score', width: 12 },
+    { header: 'Total Sessions', key: 'sessions', width: 15 },
+    { header: 'Success Rate', key: 'sr', width: 12 }
   ];
-  const ws1 = XLSX.utils.aoa_to_sheet(abstractData);
-  XLSX.utils.book_append_sheet(wb, ws1, "Cohort Summary");
-
-  // Sheet 2: Player Data
-  const playersData = [
-    ["ID", "Username", "Email", "Registration Date", "Total Score", "Total Time (s)", "Total Sessions", "Correct", "Incorrect"]
-  ];
-  playersCache.forEach((p) => {
-    playersData.push([
-      p._id,
-      p.username,
-      p.email,
-      new Date(p.createdAt).toLocaleDateString(),
-      p.stats?.score || 0,
-      p.stats?.time || 0,
-      p.stats?.totalSessions || 0,
-      p.stats?.correct || 0,
-      p.stats?.incorrect || 0
-    ]);
+  
+  styleHeaderRow(ws2.getRow(1));
+  
+  playersCache.forEach(p => {
+    const total = (p.stats?.correct || 0) + (p.stats?.incorrect || 0);
+    ws2.addRow({
+      id: p._id,
+      username: p.username,
+      email: p.email,
+      date: new Date(p.createdAt).toLocaleDateString(),
+      score: p.stats?.score || 0,
+      sessions: p.stats?.totalSessions || 0,
+      sr: total > 0 ? ((p.stats.correct / total) * 100).toFixed(1) + '%' : '0%'
+    });
   });
-  const ws2 = XLSX.utils.aoa_to_sheet(playersData);
-  XLSX.utils.book_append_sheet(wb, ws2, "Player Data");
 
-  // Sheet 3: Level Details
-  const levelsData = [
-    ["Username", "Email", "Level", "Level Score", "Level Time (s)", "Global Attempts", "Correct", "Incorrect"]
+  // --- SHEET 3: LEVEL DETAILS ---
+  const ws3 = workbook.addWorksheet('Level Details');
+  ws3.columns = [
+    { header: 'Username', key: 'username', width: 20 },
+    { header: 'Level', key: 'level', width: 15 },
+    { header: 'Score', key: 'score', width: 10 },
+    { header: 'Duration (s)', key: 'time', width: 15 },
+    { header: 'Attempts', key: 'attempts', width: 10 }
   ];
-  playersCache.forEach((p) => {
+  
+  styleHeaderRow(ws3.getRow(1));
+  
+  playersCache.forEach(p => {
     if (p.levelStats) {
-      for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
-        levelsData.push([
-          p.username,
-          p.email,
-          levelKey,
-          lStats.score || 0,
-          lStats.time || lStats.metrics?.sessionDuration || 0,
-          lStats.metrics?.levelAttempts || 1,
-          lStats.correct || 0,
-          lStats.incorrect || 0
-        ]);
-      }
+      Object.entries(p.levelStats).forEach(([levelKey, lStats]) => {
+        ws3.addRow({
+          username: p.username,
+          level: levelKey.toUpperCase(),
+          score: lStats.score || 0,
+          time: lStats.time || lStats.metrics?.sessionDuration || 0,
+          attempts: lStats.metrics?.levelAttempts || 1
+        });
+      });
     }
   });
-  const ws3 = XLSX.utils.aoa_to_sheet(levelsData);
-  XLSX.utils.book_append_sheet(wb, ws3, "Level Details");
 
-  // Download the file
-  XLSX.writeFile(wb, `Export_Cohort_PathQuest_${new Date().getTime()}.xlsx`);
+  // --- DOWNLOAD ---
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `PathQuest_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 window.exportGlobalExcel = exportGlobalExcel;
