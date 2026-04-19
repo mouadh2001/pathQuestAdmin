@@ -299,7 +299,7 @@ async function renderPlayerDetails(player) {
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
       <h3 style="margin: 0;">Global Overview</h3>
       <button id="exportCsvBtn" style="padding: 8px 15px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
-        📥 Export CSV (History)
+        📥 Export Excel (History)
       </button>
     </div>
     <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; background: #fafafa; padding: 10px; border-radius: 5px;">
@@ -339,7 +339,7 @@ async function renderPlayerDetails(player) {
   const exportBtn = document.getElementById("exportCsvBtn");
   if (exportBtn) {
     exportBtn.addEventListener("click", () =>
-      exportPlayerToCSV(player, historyData),
+      exportPlayerToExcel(player, historyData),
     );
   }
 
@@ -440,94 +440,88 @@ window.onload = () => {
   loadPlayers();
 };
 
-function exportPlayerToCSV(player, historyData) {
+async function exportPlayerToExcel(player, historyData) {
   if (!historyData || historyData.length === 0) {
     alert("No history data available for this student.");
     return;
   }
 
-  const formatCell = (val) => {
-    if (val === undefined || val === null || val === "") return "";
-    let str = String(val);
-    if (str.includes(";") || str.includes(",") || str.includes("\n") || str.includes("\r") || str.includes('"')) {
-      str = str.replace(/"/g, '""');
-      return `"${str}"`;
-    }
-    return str;
+  // 1. Initialize Workbook
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'PathQuest System';
+  workbook.created = new Date();
+
+  const styleHeaderRow = (row) => {
+    row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
+    row.alignment = { vertical: 'middle', horizontal: 'center' };
+    row.height = 25;
   };
 
-  const now = new Date();
+  // --- SHEET 1: STUDENT SUMMARY ---
+  const ws1 = workbook.addWorksheet('Student Summary');
+  ws1.columns = [{ key: 'metric', width: 30 }, { key: 'value', width: 30 }];
+  
+  ws1.addRow(['STUDENT PERFORMANCE REPORT']).font = { size: 16, bold: true };
+  ws1.addRow(['Export Date', new Date().toLocaleString()]);
+  ws1.addRow([]);
 
-  // This tells Excel to use the semicolon as the column divider
-  const excelHint = "sep=;\r\n";
+  const summaryData = [
+    ['Metric', 'Value'],
+    ['Student Username', player.username],
+    ['Student Email', player.email],
+    ['Total Registered Sessions', historyData.length],
+    ['Total Play Time (s)', player.stats?.time || 0]
+  ];
+  
+  summaryData.forEach((r, i) => {
+    const row = ws1.addRow(r);
+    if (i === 0) styleHeaderRow(row);
+  });
 
-  const metadata = [
-    ["STUDENT PERFORMANCE REPORT"],
-    ["Student", player.username],
-    ["Email", player.email],
-    ["Export Date", now.toLocaleString()],
-    ["Number of sessions", historyData.length],
-    [],
-  ]
-    .map((row) => row.map(formatCell).join(";"))
-    .join("\r\n");
+  // --- SHEET 2: SESSION LOGS ---
+  const ws2 = workbook.addWorksheet('Session Logs');
+  ws2.columns = [
+    { header: 'Date/Time', key: 'date', width: 22 },
+    { header: 'Level', key: 'level', width: 15 },
+    { header: 'Score', key: 'score', width: 10 },
+    { header: 'Success (1st try)', key: 'successCount', width: 18 },
+    { header: 'Success Rate', key: 'successRate', width: 15 },
+    { header: 'Total Time (s)', key: 'time', width: 15 },
+    { header: 'Obs. Time (s)', key: 'obsTime', width: 15 },
+    { header: 'Avg. Resp. Time (s)', key: 'avgRespTime', width: 20 },
+    { header: 'Attempts', key: 'attempts', width: 12 }
+  ];
+  
+  styleHeaderRow(ws2.getRow(1));
 
-  const headers = [
-    "Date/Time",
-    "Level",
-    "Score",
-    "Success (1st try)",
-    "Success Rate (%)",
-    "Total Time (s)",
-    "Obs. Time (s)",
-    "Avg. Response Time (s)",
-    "Attempts (Deaths/Restarts)",
-  ]
-    .map(formatCell)
-    .join(";");
+  historyData.forEach(h => {
+    const metrics = h.metrics || {};
+    const totalQ = (h.correct || 0) + (h.incorrect || 0);
+    const successRate = totalQ > 0 ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1) + '%' : '0%';
 
-  const rows = historyData
-    .map((h) => {
-      const metrics = h.metrics || {};
-      const totalQ = (h.correct || 0) + (h.incorrect || 0);
-      const successRate =
-        totalQ > 0
-          ? Number(((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1))
-          : 0;
+    ws2.addRow({
+      date: new Date(h.pushedAt).toLocaleString(),
+      level: h.levelKey ? h.levelKey.toUpperCase() : "N/A",
+      score: h.score || 0,
+      successCount: `${metrics.firstTrySuccessCount || 0}/${totalQ}`,
+      successRate: successRate,
+      time: h.time || 0,
+      obsTime: metrics.observationTime || 0,
+      avgRespTime: metrics.averageResponseTime || 0,
+      attempts: metrics.levelAttempts || 1
+    });
+  });
 
-      return [
-        new Date(h.pushedAt).toLocaleString(),
-        h.levelKey || "N/A",
-        h.score || 0,
-        `${metrics.firstTrySuccessCount || 0}/${totalQ}`,
-        successRate,
-        h.time || 0,
-        metrics.observationTime || 0,
-        metrics.averageResponseTime || 0,
-        metrics.levelAttempts || 1,
-      ]
-        .map(formatCell)
-        .join(";");
-    })
-    .join("\r\n");
-
-  // Combine everything: BOM + Hint + Metadata + Headers + Rows
-  const csvContent =
-    "\uFEFF" + excelHint + metadata + "\r\n" + headers + "\r\n" + rows;
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  // --- DOWNLOAD ---
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  const fileName = `Report_${player.username.replace(/\s+/g, "_")}_${now.getTime()}.csv`;
-
-  link.setAttribute("href", url);
-  link.setAttribute("download", fileName);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  setTimeout(() => URL.revokeObjectURL(url), 100);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `PathQuest_Report_${player.username.replace(/\s+/g, "_")}_${new Date().getTime()}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 window.createPlayer = createPlayer;
 
