@@ -213,20 +213,22 @@ async function renderPlayerDetails(player) {
           .join("");
 
         questionStatsHtml = `
-          <table style="width: 100%; border-collapse: collapse; margin-top: 5px; text-align: left; background: #f9fafb;">
-            <thead>
-              <tr style="border-bottom: 2px solid #ccc;">
-                <th style="padding: 4px;">Question ID</th>
-                <th style="padding: 4px;">Correct</th>
-                <th style="padding: 4px;">Incorrect</th>
-                <th style="padding: 4px;">First Try Success?</th>
-                <th style="padding: 4px;">Time Spent (s)</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
+          <div style="overflow-x: auto;">
+            <table class="question-stats">
+              <thead>
+                <tr>
+                  <th>Question ID</th>
+                  <th>Correct</th>
+                  <th>Incorrect</th>
+                  <th>First Try Success?</th>
+                  <th>Time Spent (s)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
         `;
       }
 
@@ -242,39 +244,41 @@ async function renderPlayerDetails(player) {
           : 0;
 
       levelStatsHtml += `
-        <div style="margin-top: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 5px;">
-          <h3 style="margin-top:0; margin-bottom: 5px; color: #1f2937; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Level: ${levelKey.toUpperCase()}</h3>
+        <details class="level-details">
+          <summary>Level: ${levelKey.toUpperCase()} <span style="font-size: 13px; color: #6b7280; font-weight: normal; margin-left: 10px;">(Score: ${levelData.score || 0})</span></summary>
           
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
-            <div style="background: #fdf2f8; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-              <h4 style="margin: 0 0 5px 0; color: #9d174d;">Performance Académique</h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                <li>Score: <strong>${levelData.score || 0}</strong></li>
-                <li>Taux de réussite par niveau (1er coup): <strong>${successRate}%</strong></li>
-                <li>Questions réussies (du 1er coup) / Totales: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
-              </ul>
+          <div class="level-content">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
+              <div style="background: #fdf2f8; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
+                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Performance Académique</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
+                  <li>Score: <strong>${levelData.score || 0}</strong></li>
+                  <li>Taux de réussite par niveau (1er coup): <strong>${successRate}%</strong></li>
+                  <li>Questions réussies (du 1er coup) / Totales: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
+                </ul>
+              </div>
+              
+              <div style="background: #eff6ff; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
+                <h4 style="margin: 0 0 5px 0; color: #1e3a8a;">Courbe d'Apprentissage</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
+                  <li>Nb. de tentatives (Morts/Restarts): <strong>${metrics.levelAttempts || 1}</strong></li>
+                </ul>
+              </div>
+
+              <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
+                <h4 style="margin: 0 0 5px 0; color: #14532d;">Temps & Engagement</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
+                  <li>Temps d'observation Lames: <strong>${metrics.observationTime || 0}s</strong></li>
+                  <li>Temps de réponse (moyenne): <strong>${metrics.averageResponseTime || 0}s</strong></li>
+                  <li>Temps par niveau (Session): <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
+                </ul>
+              </div>
             </div>
             
-            <div style="background: #eff6ff; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-              <h4 style="margin: 0 0 5px 0; color: #1e3a8a;">Courbe d'Apprentissage</h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                <li>Nb. de tentatives (Morts/Restarts): <strong>${metrics.levelAttempts || 1}</strong></li>
-              </ul>
-            </div>
-
-            <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-              <h4 style="margin: 0 0 5px 0; color: #14532d;">Temps & Engagement</h4>
-              <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                <li>Temps d'observation Lames: <strong>${metrics.observationTime || 0}s</strong></li>
-                <li>Temps de réponse (moyenne): <strong>${metrics.averageResponseTime || 0}s</strong></li>
-                <li>Temps par niveau (Session): <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
-              </ul>
-            </div>
+            <h4 style="margin: 10px 0 5px 0; color: #374151;">Questions Data</h4>
+            ${questionStatsHtml}
           </div>
-          
-          <h4 style="margin: 10px 0 5px 0; color: #374151;">Questions Data</h4>
-          ${questionStatsHtml}
-        </div>
+        </details>
       `;
     }
   } else {
@@ -312,11 +316,14 @@ async function renderPlayerDetails(player) {
     <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-top: 20px; margin-bottom: 20px;">
       <h3 style="margin-top: 0;">Graphiques Analytics (Chart.js)</h3>
       <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 300px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
            <canvas id="scoreVsTryChart"></canvas>
         </div>
-        <div style="flex: 1; min-width: 300px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
            <canvas id="timeVsDayChart"></canvas>
+        </div>
+        <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+           <canvas id="learningProgressionChart"></canvas>
         </div>
       </div>
     </div>
@@ -337,7 +344,7 @@ async function renderPlayerDetails(player) {
 
   // Draw Charts
   if (historyData.length > 0) {
-    const labelsTries = historyData.map((_, i) => `T${i + 1}`);
+    const labelsTries = historyData.map((_, i) => `T\${i + 1}`);
     const scoreData = historyData.map((h) => h.score);
     const timeData = historyData.map(
       (h) => h.metrics?.averageResponseTime || 0,
@@ -345,6 +352,11 @@ async function renderPlayerDetails(player) {
     const labelsDates = historyData.map((h) =>
       new Date(h.pushedAt).toLocaleDateString(),
     );
+    const successRateData = historyData.map((h) => {
+      const qAnswered = (h.correct || 0) + (h.incorrect || 0);
+      const firstTry = h.metrics?.firstTrySuccessCount || 0;
+      return qAnswered > 0 ? ((firstTry / qAnswered) * 100).toFixed(1) : 0;
+    });
 
     new Chart(document.getElementById("scoreVsTryChart"), {
       type: "line",
@@ -380,6 +392,31 @@ async function renderPlayerDetails(player) {
           },
         ],
       },
+    });
+
+    new Chart(document.getElementById("learningProgressionChart"), {
+      type: "line",
+      data: {
+        labels: labelsTries,
+        datasets: [
+          {
+            label: "Taux de réussite (%) vs Session",
+            data: successRateData,
+            borderColor: "#f59e0b",
+            backgroundColor: "rgba(245, 158, 11, 0.2)",
+            fill: true,
+            tension: 0.1,
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 100
+          }
+        }
+      }
     });
   }
 }

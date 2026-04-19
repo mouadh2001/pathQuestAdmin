@@ -154,3 +154,91 @@ tr.selected {
     margin-right: 0;
   }
 }
+
+/* ===== Details Accordion ===== */
+details.level-details {
+  margin-top: 15px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+details.level-details summary {
+  padding: 15px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  background-color: #f8fafc;
+  cursor: pointer;
+  list-style: none; /* remove standard arrow */
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.2s ease;
+}
+
+details.level-details[open] summary {
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f1f5f9;
+}
+
+details.level-details summary:hover {
+  background-color: #f1f5f9;
+}
+
+details.level-details summary::-webkit-details-marker {
+  display: none;
+}
+
+details.level-details summary::before {
+  content: '▶';
+  font-size: 12px;
+  margin-right: 15px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+details.level-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.level-content {
+  padding: 15px 20px;
+}
+
+/* ===== Question Stats Table ===== */
+table.question-stats {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 5px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  text-align: left;
+}
+
+table.question-stats thead {
+  background-color: #f8fafc;
+  color: #475569;
+}
+
+table.question-stats th {
+  padding: 10px;
+  border-bottom: 2px solid #e5e7eb;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+table.question-stats td {
+  padding: 10px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+  color: #334155;
+  background-color: transparent;
+}
+
+table.question-stats tr:last-child td {
+  border-bottom: none;
+}
