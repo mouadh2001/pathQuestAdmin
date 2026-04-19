@@ -56,6 +56,7 @@ async function loadPlayers() {
     playersCache = Array.isArray(players) ? players : [];
 
     await renderPlayers();
+    renderGlobalStats(playersCache);
   } catch (err) {
     console.error(err);
   }
@@ -526,3 +527,135 @@ function exportPlayerToCSV(player, historyData) {
   setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 window.createPlayer = createPlayer;
+
+function renderGlobalStats(players) {
+  const container = document.getElementById("globalStats");
+  const content = document.getElementById("globalStatsContent");
+  if (!players || players.length === 0) {
+    container.classList.add("hidden");
+    return;
+  }
+  
+  container.classList.remove("hidden");
+  
+  let totalScore = 0;
+  let totalTime = 0;
+  let totalCorrect = 0;
+  let totalIncorrect = 0;
+  
+  players.forEach((p) => {
+    totalScore += p.stats?.score || 0;
+    totalTime += p.stats?.time || 0;
+    totalCorrect += p.stats?.correct || 0;
+    totalIncorrect += p.stats?.incorrect || 0;
+  });
+  
+  const avgScore = (totalScore / players.length).toFixed(1);
+  const avgTime = (totalTime / players.length).toFixed(1);
+  const totalQuestions = totalCorrect + totalIncorrect;
+  const successRate = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100).toFixed(1) : 0;
+  
+  content.innerHTML = `
+    <div class="metric-box">
+      <div class="metric-title">Total Players</div>
+      <div class="metric-value">${players.length}</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-title">Score Moyen</div>
+      <div class="metric-value">${avgScore}</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-title">Temps Moyen (s)</div>
+      <div class="metric-value">${avgTime}s</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-title">Réussite Globale (%)</div>
+      <div class="metric-value">${successRate}%</div>
+    </div>
+  `;
+}
+
+function exportGlobalExcel() {
+  if (!playersCache || playersCache.length === 0) {
+    alert("Aucune donnée de joueur disponible.");
+    return;
+  }
+
+  // Utilisation de la librairie SheetJS (XLSX) pour créer un workbook avec plusieurs feuilles
+  const wb = XLSX.utils.book_new();
+
+  // Feuille 1: Résumé Cohorte
+  let totalScore = 0;
+  let totalTime = 0;
+  let totalCorrect = 0;
+  let totalIncorrect = 0;
+  
+  playersCache.forEach((p) => {
+    totalScore += p.stats?.score || 0;
+    totalTime += p.stats?.time || 0;
+    totalCorrect += p.stats?.correct || 0;
+    totalIncorrect += p.stats?.incorrect || 0;
+  });
+  const totalTotal = totalCorrect + totalIncorrect;
+  const globalSuccessRate = totalTotal > 0 ? ((totalCorrect / totalTotal) * 100).toFixed(1) : 0;
+
+  const abstractData = [
+    ["RÉSUMÉ GLOBAL DE LA COHORTE"],
+    [],
+    ["Date d'export", new Date().toLocaleString()],
+    ["Joueurs Totaux", playersCache.length],
+    ["Score Global Moyen", (totalScore / playersCache.length).toFixed(1)],
+    ["Temps Global Moyen (s)", (totalTime / playersCache.length).toFixed(1)],
+    ["Taux de réussite global", `${globalSuccessRate}%`]
+  ];
+  const ws1 = XLSX.utils.aoa_to_sheet(abstractData);
+  XLSX.utils.book_append_sheet(wb, ws1, "Résumé Cohorte");
+
+  // Feuille 2: Données des Joueurs (liste plate)
+  const playersData = [
+    ["ID", "Username", "Email", "Date d'inscription", "Score Total", "Temps Total (s)", "Total Sessions", "Correct", "Incorrect"]
+  ];
+  playersCache.forEach((p) => {
+    playersData.push([
+      p._id,
+      p.username,
+      p.email,
+      new Date(p.createdAt).toLocaleDateString(),
+      p.stats?.score || 0,
+      p.stats?.time || 0,
+      p.stats?.totalSessions || 0,
+      p.stats?.correct || 0,
+      p.stats?.incorrect || 0
+    ]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(playersData);
+  XLSX.utils.book_append_sheet(wb, ws2, "Données Joueurs");
+
+  // Feuille 3: Détails structurés par niveau de chaque joueur
+  const levelsData = [
+    ["Username", "Email", "Niveau", "Score Niveau", "Temps Niveau (s)", "Tentatives globales", "Correct", "Incorrect"]
+  ];
+  playersCache.forEach((p) => {
+    if (p.levelStats) {
+      for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
+        levelsData.push([
+          p.username,
+          p.email,
+          levelKey,
+          lStats.score || 0,
+          lStats.time || lStats.metrics?.sessionDuration || 0,
+          lStats.metrics?.levelAttempts || 1,
+          lStats.correct || 0,
+          lStats.incorrect || 0
+        ]);
+      }
+    }
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(levelsData);
+  XLSX.utils.book_append_sheet(wb, ws3, "Détails Niveaux");
+
+  // On télécharge le fichier excel .xlsx directement !
+  XLSX.writeFile(wb, `Export_Cohorte_PathQuest_${new Date().getTime()}.xlsx`);
+}
+
+window.exportGlobalExcel = exportGlobalExcel;

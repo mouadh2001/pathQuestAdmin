@@ -242,3 +242,26 @@ table.question-stats td {
 table.question-stats tr:last-child td {
   border-bottom: none;
 }
+
+/* ===== Metric Boxes ===== */
+.metric-box {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  flex: 1;
+  min-width: 150px;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+.metric-box .metric-title {
+  font-size: 13px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.metric-box .metric-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #0f172a;
+}
