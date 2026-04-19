@@ -447,27 +447,30 @@ function exportPlayerToCSV(player, historyData) {
   }
 
   const formatCell = (val) => {
-    if (val === undefined || val === null) return '""';
-    let str = String(val).replace(/"/g, '""');
-    return `"${str}"`;
+    if (val === undefined || val === null || val === "") return "";
+    let str = String(val);
+    if (str.includes(";") || str.includes(",") || str.includes("\n") || str.includes("\r") || str.includes('"')) {
+      str = str.replace(/"/g, '""');
+      return `"${str}"`;
+    }
+    return str;
   };
 
   const now = new Date();
 
-  // --- NEW: Excel Separator Hint ---
-  // This line tells Excel to use the semicolon as the column divider
-  const excelHint = "sep=;\n";
+  // This tells Excel to use the semicolon as the column divider
+  const excelHint = "sep=;\r\n";
 
   const metadata = [
-    [`STUDENT PERFORMANCE REPORT`],
-    [`Student`, player.username],
-    [`Email`, player.email],
-    [`Export Date`, now.toLocaleString()],
-    [`Number of sessions`, historyData.length],
+    ["STUDENT PERFORMANCE REPORT"],
+    ["Student", player.username],
+    ["Email", player.email],
+    ["Export Date", now.toLocaleString()],
+    ["Number of sessions", historyData.length],
     [],
   ]
     .map((row) => row.map(formatCell).join(";"))
-    .join("\n");
+    .join("\r\n");
 
   const headers = [
     "Date/Time",
@@ -489,15 +492,15 @@ function exportPlayerToCSV(player, historyData) {
       const totalQ = (h.correct || 0) + (h.incorrect || 0);
       const successRate =
         totalQ > 0
-          ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1)
-          : "0";
+          ? Number(((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1))
+          : 0;
 
       return [
         new Date(h.pushedAt).toLocaleString(),
         h.levelKey || "N/A",
         h.score || 0,
-        `${metrics.firstTrySuccessCount || 0} / ${totalQ}`,
-        `${successRate}%`,
+        `${metrics.firstTrySuccessCount || 0}/${totalQ}`,
+        successRate,
         h.time || 0,
         metrics.observationTime || 0,
         metrics.averageResponseTime || 0,
@@ -506,17 +509,17 @@ function exportPlayerToCSV(player, historyData) {
         .map(formatCell)
         .join(";");
     })
-    .join("\n");
+    .join("\r\n");
 
   // Combine everything: BOM + Hint + Metadata + Headers + Rows
   const csvContent =
-    "\uFEFF" + excelHint + metadata + "\n" + headers + "\n" + rows;
+    "\uFEFF" + excelHint + metadata + "\r\n" + headers + "\r\n" + rows;
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
   const link = document.createElement("a");
-  const fileName = `Rapport_${player.username.replace(/\s+/g, "_")}_${now.getTime()}.csv`;
+  const fileName = `Report_${player.username.replace(/\s+/g, "_")}_${now.getTime()}.csv`;
 
   link.setAttribute("href", url);
   link.setAttribute("download", fileName);
