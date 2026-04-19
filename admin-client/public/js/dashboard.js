@@ -750,9 +750,15 @@ async function exportGlobalExcel() {
       for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
         if (!levelAggs[levelKey]) {
           levelAggs[levelKey] = {
+            playersCount: 0,
+            totalScore: 0,
+            totalTime: 0,
             questions: {}
           };
         }
+        levelAggs[levelKey].playersCount += 1;
+        levelAggs[levelKey].totalScore += lStats.score || 0;
+        levelAggs[levelKey].totalTime += lStats.time || lStats.metrics?.sessionDuration || 0;
         if (lStats.questionStats) {
           for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
             if (!levelAggs[levelKey].questions[qId]) {
@@ -781,6 +787,26 @@ async function exportGlobalExcel() {
         firstTry: counts.firstTrySuccesses
       });
     }
+  }
+
+  // --- SHEET 5: LEVEL PERFORMANCE ---
+  const ws5 = workbook.addWorksheet('Level Performance');
+  ws5.columns = [
+    { header: 'Level', key: 'level', width: 20 },
+    { header: 'Players Count', key: 'playersCount', width: 15 },
+    { header: 'Average Score', key: 'avgScore', width: 15 },
+    { header: 'Average Time (s)', key: 'avgTime', width: 20 }
+  ];
+  
+  styleHeaderRow(ws5.getRow(1));
+  
+  for (const [lvl, data] of Object.entries(levelAggs)) {
+    ws5.addRow({
+      level: lvl.toUpperCase(),
+      playersCount: data.playersCount,
+      avgScore: data.playersCount > 0 ? Number((data.totalScore / data.playersCount).toFixed(1)) : 0,
+      avgTime: data.playersCount > 0 ? Number((data.totalTime / data.playersCount).toFixed(1)) : 0
+    });
   }
 
   // --- DOWNLOAD ---
