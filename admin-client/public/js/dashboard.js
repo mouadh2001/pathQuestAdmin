@@ -151,23 +151,23 @@ async function renderPlayerDetails(player) {
       : 0;
 
   // Fréquence
-  let freqSessions = "Non calculable";
+  let freqSessions = "Not calculable";
   if (historyData.length > 1) {
     const firstDate = new Date(historyData[0].pushedAt);
     const lastDate = new Date(historyData[historyData.length - 1].pushedAt);
     const diffWeeks = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 7);
     if (diffWeeks > 0.01) {
       freqSessions =
-        (historyData.length / diffWeeks).toFixed(1) + " sessions/semaine";
+        (historyData.length / diffWeeks).toFixed(1) + " sessions/week";
     } else {
-      freqSessions = historyData.length + " sessions (moins d'1 semaine)";
+      freqSessions = historyData.length + " sessions (under 1 week)";
     }
   } else if (historyData.length === 1) {
-    freqSessions = "1 session unique";
+    freqSessions = "1 unique session";
   }
 
   // Correlation calculation (Pearson loosely) on history (Time spent vs Score)
-  let correlationMsg = "Non calculable (trop peu de données)";
+  let correlationMsg = "Not calculable (too few data)";
   if (historyData.length > 2) {
     // array of x (time), y (score)
     const X = historyData.map((h) => h.metrics?.observationTime || 0);
@@ -184,10 +184,10 @@ async function renderPlayerDetails(player) {
     );
     if (denominator !== 0) {
       const r = numerator / denominator;
-      if (r > 0.5) correlationMsg = `Forte (r=${r.toFixed(2)})`;
-      else if (r > 0.1) correlationMsg = `Positive Faible (r=${r.toFixed(2)})`;
-      else if (r > -0.1) correlationMsg = `Nulle (r=${r.toFixed(2)})`;
-      else correlationMsg = `Négative (r=${r.toFixed(2)})`;
+      if (r > 0.5) correlationMsg = `Strong (r=${r.toFixed(2)})`;
+      else if (r > 0.1) correlationMsg = `Weak Positive (r=${r.toFixed(2)})`;
+      else if (r > -0.1) correlationMsg = `Zero (r=${r.toFixed(2)})`;
+      else correlationMsg = `Negative (r=${r.toFixed(2)})`;
     }
   }
 
@@ -206,7 +206,7 @@ async function renderPlayerDetails(player) {
               <td>${qId}</td>
               <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
               <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
-              <td>${st.firstTrySuccess ? "✅ Oui" : "❌ Non"}</td>
+              <td>${st.firstTrySuccess ? "✅ Yes" : "❌ No"}</td>
               <td>${st.timeSpent ? st.timeSpent + "s" : "-"}</td>
             </tr>
           `,
@@ -251,27 +251,27 @@ async function renderPlayerDetails(player) {
           <div class="level-content">
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
               <div style="background: #fdf2f8; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Performance Académique</h4>
+                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Academic Performance</h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
                   <li>Score: <strong>${levelData.score || 0}</strong></li>
-                  <li>Taux de réussite par niveau (1er coup): <strong>${successRate}%</strong></li>
-                  <li>Questions réussies (du 1er coup) / Totales: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
+                  <li>Success rate per level (1st try): <strong>${successRate}%</strong></li>
+                  <li>Successful questions (1st try) / Total: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
                 </ul>
               </div>
               
               <div style="background: #eff6ff; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #1e3a8a;">Courbe d'Apprentissage</h4>
+                <h4 style="margin: 0 0 5px 0; color: #1e3a8a;">Learning Curve</h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                  <li>Nb. de tentatives (Morts/Restarts): <strong>${metrics.levelAttempts || 1}</strong></li>
+                  <li>Number of attempts (Deaths/Restarts): <strong>${metrics.levelAttempts || 1}</strong></li>
                 </ul>
               </div>
 
               <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #14532d;">Temps & Engagement</h4>
+                <h4 style="margin: 0 0 5px 0; color: #14532d;">Time & Engagement</h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                  <li>Temps d'observation Lames: <strong>${metrics.observationTime || 0}s</strong></li>
-                  <li>Temps de réponse (moyenne): <strong>${metrics.averageResponseTime || 0}s</strong></li>
-                  <li>Temps par niveau (Session): <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
+                  <li>Observation Time: <strong>${metrics.observationTime || 0}s</strong></li>
+                  <li>Avg. Response Time: <strong>${metrics.averageResponseTime || 0}s</strong></li>
+                  <li>Time per level (Session): <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
                 </ul>
               </div>
             </div>
@@ -297,25 +297,25 @@ async function renderPlayerDetails(player) {
 
   content.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h3 style="margin: 0;">Aperçu Global</h3>
+      <h3 style="margin: 0;">Global Overview</h3>
       <button id="exportCsvBtn" style="padding: 8px 15px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
-        📥 Exporter CSV (Historique)
+        📥 Export CSV (History)
       </button>
     </div>
     <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; background: #fafafa; padding: 10px; border-radius: 5px;">
       <dt style="font-weight: bold;">Username</dt><dd style="margin-left: 0;">${player.username}</dd>
       <dt style="font-weight: bold;">Email</dt><dd style="margin-left: 0;">${player.email}</dd>
-      <dt style="font-weight: bold;">Taux de réussite global (1er coup)</dt><dd style="margin-left: 0; color: green; font-weight: bold;">${globalSuccessRate}%</dd>
-      <dt style="font-weight: bold;">Taux d'amélioration</dt><dd style="margin-left: 0;">${tauxAmelioration}%</dd>
-      <dt style="font-weight: bold;">Vitesse d'apprentissage</dt><dd style="margin-left: 0;">${vitesseApprentissage} pts/session</dd>
-      <dt style="font-weight: bold;">Durée de jeu totale</dt><dd style="margin-left: 0;">${player.stats?.time ?? 0}s</dd>
-      <dt style="font-weight: bold;">Durée moy. par session</dt><dd style="margin-left: 0;">${averageSessionTime}s</dd>
-      <dt style="font-weight: bold;">Fréquence des sessions</dt><dd style="margin-left: 0;">${freqSessions}</dd>
-      <dt style="font-weight: bold;">Corrélation (Temps Obs. / Score)</dt><dd style="margin-left: 0;">${correlationMsg}</dd>
+      <dt style="font-weight: bold;">Global Success Rate (1st try)</dt><dd style="margin-left: 0; color: green; font-weight: bold;">${globalSuccessRate}%</dd>
+      <dt style="font-weight: bold;">Improvement Rate</dt><dd style="margin-left: 0;">${tauxAmelioration}%</dd>
+      <dt style="font-weight: bold;">Learning Speed</dt><dd style="margin-left: 0;">${vitesseApprentissage} pts/session</dd>
+      <dt style="font-weight: bold;">Total Playtime</dt><dd style="margin-left: 0;">${player.stats?.time ?? 0}s</dd>
+      <dt style="font-weight: bold;">Avg. Session Duration</dt><dd style="margin-left: 0;">${averageSessionTime}s</dd>
+      <dt style="font-weight: bold;">Session Frequency</dt><dd style="margin-left: 0;">${freqSessions}</dd>
+      <dt style="font-weight: bold;">Correlation (Obs. Time / Score)</dt><dd style="margin-left: 0;">${correlationMsg}</dd>
     </dl>
     
     <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-top: 20px; margin-bottom: 20px;">
-      <h3 style="margin-top: 0;">Graphiques Analytics (Chart.js)</h3>
+      <h3 style="margin-top: 0;">Analytics Charts (Chart.js)</h3>
       <div style="display: flex; gap: 20px; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
            <canvas id="scoreVsTryChart"></canvas>
@@ -330,7 +330,7 @@ async function renderPlayerDetails(player) {
     </div>
 
     <div style="border-top: 2px solid #ccc; padding-top: 15px;">
-      <h3 style="margin-top: 0;">Détails par Niveau</h3>
+      <h3 style="margin-top: 0;">Level Details</h3>
       ${levelStatsHtml}
     </div>
   `;
@@ -442,7 +442,7 @@ window.onload = () => {
 
 function exportPlayerToCSV(player, historyData) {
   if (!historyData || historyData.length === 0) {
-    alert("Aucune donnée d'historique disponible pour cet étudiant.");
+    alert("No history data available for this student.");
     return;
   }
 
@@ -459,26 +459,26 @@ function exportPlayerToCSV(player, historyData) {
   const excelHint = "sep=;\n";
 
   const metadata = [
-    [`RAPPORT DE PERFORMANCE ETUDIANT`],
-    [`Etudiant`, player.username],
+    [`STUDENT PERFORMANCE REPORT`],
+    [`Student`, player.username],
     [`Email`, player.email],
-    [`Date d'export`, now.toLocaleString()],
-    [`Nombre de sessions`, historyData.length],
+    [`Export Date`, now.toLocaleString()],
+    [`Number of sessions`, historyData.length],
     [],
   ]
     .map((row) => row.map(formatCell).join(";"))
     .join("\n");
 
   const headers = [
-    "Date/Heure",
-    "Niveau",
+    "Date/Time",
+    "Level",
     "Score",
-    "Reussite (1er coup)",
-    "Taux de Succes (%)",
-    "Temps Total (s)",
-    "Temps Obs. Lames (s)",
-    "Temps Rep. Moyen (s)",
-    "Tentatives (Morts/Restarts)",
+    "Success (1st try)",
+    "Success Rate (%)",
+    "Total Time (s)",
+    "Obs. Time (s)",
+    "Avg. Response Time (s)",
+    "Attempts (Deaths/Restarts)",
   ]
     .map(formatCell)
     .join(";");
@@ -592,14 +592,14 @@ function renderGlobalStats(players) {
       }).join("");
       
       qHtml = `
-        <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance par Question (sur \${data.playersCount} joueurs au total ayant joué à ce niveau)</h4>
+        <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of \${data.playersCount} players total who played this level)</h4>
         <div style="overflow-x: auto;">
           <table class="question-stats" style="width: 100%;">
             <thead>
               <tr>
                 <th style="text-align: left;">Question</th>
-                <th style="text-align: center;">Joueurs ayant répondu correctement (Final)</th>
-                <th style="text-align: center;">Joueurs ayant répondu correctement (1er coup)</th>
+                <th style="text-align: center;">Players who answered correctly (Final)</th>
+                <th style="text-align: center;">Players who answered correctly (1st try)</th>
               </tr>
             </thead>
             <tbody>\${qRows}</tbody>
@@ -610,15 +610,15 @@ function renderGlobalStats(players) {
     
     insightsHtml += `
       <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Niveau : \${lvl.toUpperCase()}</h3>
+        <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Level : \${lvl.toUpperCase()}</h3>
         
         <div style="display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0;">
           <div class="metric-box" style="background: white;">
-            <div class="metric-title">Score Moyen</div>
+            <div class="metric-title">Average Score</div>
             <div class="metric-value">\${avgLvlScore}</div>
           </div>
           <div class="metric-box" style="background: white;">
-            <div class="metric-title">Temps Moyen (s)</div>
+            <div class="metric-title">Average Time (s)</div>
             <div class="metric-value">\${avgLvlTime}</div>
           </div>
         </div>
@@ -629,21 +629,21 @@ function renderGlobalStats(players) {
   
   content.innerHTML = `
     <div style="width: 100%;">
-      \${insightsHtml || "<p style='color: #6b7280;'>Aucun niveau joué pour le moment.</p>"}
+      \${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
     </div>
   `;
 }
 
 function exportGlobalExcel() {
   if (!playersCache || playersCache.length === 0) {
-    alert("Aucune donnée de joueur disponible.");
+    alert("No player data available.");
     return;
   }
 
-  // Utilisation de la librairie SheetJS (XLSX) pour créer un workbook avec plusieurs feuilles
+  // Use SheetJS (XLSX) to create a workbook
   const wb = XLSX.utils.book_new();
 
-  // Feuille 1: Résumé Cohorte
+  // Sheet 1: Cohort Summary
   let totalScore = 0;
   let totalTime = 0;
   let totalCorrect = 0;
@@ -659,20 +659,20 @@ function exportGlobalExcel() {
   const globalSuccessRate = totalTotal > 0 ? ((totalCorrect / totalTotal) * 100).toFixed(1) : 0;
 
   const abstractData = [
-    ["RÉSUMÉ GLOBAL DE LA COHORTE"],
+    ["GLOBAL COHORT SUMMARY"],
     [],
-    ["Date d'export", new Date().toLocaleString()],
-    ["Joueurs Totaux", playersCache.length],
-    ["Score Global Moyen", (totalScore / playersCache.length).toFixed(1)],
-    ["Temps Global Moyen (s)", (totalTime / playersCache.length).toFixed(1)],
-    ["Taux de réussite global", `${globalSuccessRate}%`]
+    ["Export Date", new Date().toLocaleString()],
+    ["Total Players", playersCache.length],
+    ["Average Global Score", (totalScore / playersCache.length).toFixed(1)],
+    ["Average Global Time (s)", (totalTime / playersCache.length).toFixed(1)],
+    ["Global Success Rate", `${globalSuccessRate}%`]
   ];
   const ws1 = XLSX.utils.aoa_to_sheet(abstractData);
-  XLSX.utils.book_append_sheet(wb, ws1, "Résumé Cohorte");
+  XLSX.utils.book_append_sheet(wb, ws1, "Cohort Summary");
 
-  // Feuille 2: Données des Joueurs (liste plate)
+  // Sheet 2: Player Data
   const playersData = [
-    ["ID", "Username", "Email", "Date d'inscription", "Score Total", "Temps Total (s)", "Total Sessions", "Correct", "Incorrect"]
+    ["ID", "Username", "Email", "Registration Date", "Total Score", "Total Time (s)", "Total Sessions", "Correct", "Incorrect"]
   ];
   playersCache.forEach((p) => {
     playersData.push([
@@ -688,11 +688,11 @@ function exportGlobalExcel() {
     ]);
   });
   const ws2 = XLSX.utils.aoa_to_sheet(playersData);
-  XLSX.utils.book_append_sheet(wb, ws2, "Données Joueurs");
+  XLSX.utils.book_append_sheet(wb, ws2, "Player Data");
 
-  // Feuille 3: Détails structurés par niveau de chaque joueur
+  // Sheet 3: Level Details
   const levelsData = [
-    ["Username", "Email", "Niveau", "Score Niveau", "Temps Niveau (s)", "Tentatives globales", "Correct", "Incorrect"]
+    ["Username", "Email", "Level", "Level Score", "Level Time (s)", "Global Attempts", "Correct", "Incorrect"]
   ];
   playersCache.forEach((p) => {
     if (p.levelStats) {
@@ -711,10 +711,10 @@ function exportGlobalExcel() {
     }
   });
   const ws3 = XLSX.utils.aoa_to_sheet(levelsData);
-  XLSX.utils.book_append_sheet(wb, ws3, "Détails Niveaux");
+  XLSX.utils.book_append_sheet(wb, ws3, "Level Details");
 
-  // On télécharge le fichier excel .xlsx directement !
-  XLSX.writeFile(wb, `Export_Cohorte_PathQuest_${new Date().getTime()}.xlsx`);
+  // Download the file
+  XLSX.writeFile(wb, `Export_Cohort_PathQuest_${new Date().getTime()}.xlsx`);
 }
 
 window.exportGlobalExcel = exportGlobalExcel;
