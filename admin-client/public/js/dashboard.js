@@ -584,15 +584,15 @@ function renderGlobalStats(players) {
       const qRows = Object.entries(data.questions).map(([qId, counts]) => {
         return `
           <tr>
-            <td>\${qId}</td>
-            <td style="text-align: center; font-weight: bold; color: #0284c7;">\${counts.correctAnswers}</td>
-            <td style="text-align: center; font-weight: bold; color: #16a34a;">\${counts.firstTrySuccesses}</td>
+            <td>${qId}</td>
+            <td style="text-align: center; font-weight: bold; color: #0284c7;">${counts.correctAnswers}</td>
+            <td style="text-align: center; font-weight: bold; color: #16a34a;">${counts.firstTrySuccesses}</td>
           </tr>
         `;
       }).join("");
       
       qHtml = `
-        <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of \${data.playersCount} players total who played this level)</h4>
+        <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of ${data.playersCount} players total who played this level)</h4>
         <div style="overflow-x: auto;">
           <table class="question-stats" style="width: 100%;">
             <thead>
@@ -602,7 +602,7 @@ function renderGlobalStats(players) {
                 <th style="text-align: center;">Players who answered correctly (1st try)</th>
               </tr>
             </thead>
-            <tbody>\${qRows}</tbody>
+            <tbody>${qRows}</tbody>
           </table>
         </div>
       `;
@@ -610,26 +610,26 @@ function renderGlobalStats(players) {
     
     insightsHtml += `
       <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-        <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Level : \${lvl.toUpperCase()}</h3>
+        <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Level : ${lvl.toUpperCase()}</h3>
         
         <div style="display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0;">
           <div class="metric-box" style="background: white;">
             <div class="metric-title">Average Score</div>
-            <div class="metric-value">\${avgLvlScore}</div>
+            <div class="metric-value">${avgLvlScore}</div>
           </div>
           <div class="metric-box" style="background: white;">
             <div class="metric-title">Average Time (s)</div>
-            <div class="metric-value">\${avgLvlTime}</div>
+            <div class="metric-value">${avgLvlTime}</div>
           </div>
         </div>
-        \${qHtml}
+        ${qHtml}
       </div>
     `;
   }
   
   content.innerHTML = `
     <div style="width: 100%;">
-      \${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
+      ${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
     </div>
   `;
 }
