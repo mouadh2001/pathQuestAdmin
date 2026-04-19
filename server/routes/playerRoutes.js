@@ -68,7 +68,7 @@ router.post("/create", authMiddleware, async (req, res) => {
    GET ALL PLAYERS (Admin Only)
 ================================= */
 router.get("/all", authMiddleware, async (req, res) => {
-  const players = await Player.find();
+  const players = await Player.find().lean();
   res.json(players);
 });
 
