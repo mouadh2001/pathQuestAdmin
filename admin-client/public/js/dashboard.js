@@ -538,20 +538,10 @@ function renderGlobalStats(players) {
   
   container.classList.remove("hidden");
   
-  let totalScore = 0;
-  let totalTime = 0;
-  let totalCorrect = 0;
-  let totalIncorrect = 0;
-  
   // Accumulateur pour les insights par niveau
   const levelAggregates = {};
   
   players.forEach((p) => {
-    totalScore += p.stats?.score || 0;
-    totalTime += p.stats?.time || 0;
-    totalCorrect += p.stats?.correct || 0;
-    totalIncorrect += p.stats?.incorrect || 0;
-    
     if (p.levelStats) {
       for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
         if (!levelAggregates[levelKey]) {
@@ -569,9 +559,12 @@ function renderGlobalStats(players) {
         if (lStats.questionStats) {
           for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
             if (!levelAggregates[levelKey].questions[qId]) {
-              levelAggregates[levelKey].questions[qId] = { attemptedBy: 0, firstTrySuccesses: 0 };
+              levelAggregates[levelKey].questions[qId] = { attemptedBy: 0, correctAnswers: 0, firstTrySuccesses: 0 };
             }
             levelAggregates[levelKey].questions[qId].attemptedBy += 1;
+            if (qStat.correct > 0) {
+              levelAggregates[levelKey].questions[qId].correctAnswers += 1;
+            }
             if (qStat.firstTrySuccess) {
               levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
             }
@@ -581,11 +574,6 @@ function renderGlobalStats(players) {
     }
   });
   
-  const avgScore = (totalScore / players.length).toFixed(1);
-  const avgTime = (totalTime / players.length).toFixed(1);
-  const totalQuestions = totalCorrect + totalIncorrect;
-  const successRate = totalQuestions > 0 ? ((totalCorrect / totalQuestions) * 100).toFixed(1) : 0;
-  
   let insightsHtml = "";
   for (const [lvl, data] of Object.entries(levelAggregates)) {
     const avgLvlScore = (data.totalScore / data.playersCount).toFixed(1);
@@ -594,26 +582,24 @@ function renderGlobalStats(players) {
     let qHtml = "";
     if (Object.keys(data.questions).length > 0) {
       const qRows = Object.entries(data.questions).map(([qId, counts]) => {
-        const rate = counts.attemptedBy > 0 ? ((counts.firstTrySuccesses / counts.attemptedBy) * 100).toFixed(1) : 0;
-        const color = rate >= 50 ? 'green' : 'red';
         return `
           <tr>
             <td>\${qId}</td>
-            <td><strong>\${counts.firstTrySuccesses} / \${counts.attemptedBy}</strong> joueurs (1er coup)</td>
-            <td style="color: \${color}; font-weight: bold;">\${rate}%</td>
+            <td style="text-align: center; font-weight: bold; color: #0284c7;">\${counts.correctAnswers}</td>
+            <td style="text-align: center; font-weight: bold; color: #16a34a;">\${counts.firstTrySuccesses}</td>
           </tr>
         `;
       }).join("");
       
       qHtml = `
-        <h4 style="margin: 15px 0 5px 0; color: #374151;">Détails par Question</h4>
+        <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance par Question (sur \${data.playersCount} joueurs au total ayant joué à ce niveau)</h4>
         <div style="overflow-x: auto;">
-          <table class="question-stats">
+          <table class="question-stats" style="width: 100%;">
             <thead>
               <tr>
-                <th>Question</th>
-                <th>Réussite (1er coup)</th>
-                <th>Taux (%)</th>
+                <th style="text-align: left;">Question</th>
+                <th style="text-align: center;">Joueurs ayant répondu correctement (Final)</th>
+                <th style="text-align: center;">Joueurs ayant répondu correctement (1er coup)</th>
               </tr>
             </thead>
             <tbody>\${qRows}</tbody>
@@ -623,42 +609,26 @@ function renderGlobalStats(players) {
     }
     
     insightsHtml += `
-      <details class="level-details" style="margin-top: 10px;">
-        <summary style="background-color: #e0e7ff; color: #3730a3;">Insights - Niveau : \${lvl.toUpperCase()}</summary>
-        <div class="level-content">
-          <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 5px;">
-            <div style="background: #f8fafc; padding: 10px; border-radius: 5px; flex: 1;">Joueurs : <strong>\${data.playersCount}</strong></div>
-            <div style="background: #f8fafc; padding: 10px; border-radius: 5px; flex: 1;">Score moyen : <strong>\${avgLvlScore}</strong></div>
-            <div style="background: #f8fafc; padding: 10px; border-radius: 5px; flex: 1;">Durée moy. : <strong>\${avgLvlTime}s</strong></div>
+      <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Niveau : \${lvl.toUpperCase()}</h3>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0;">
+          <div class="metric-box" style="background: white;">
+            <div class="metric-title">Score Moyen</div>
+            <div class="metric-value">\${avgLvlScore}</div>
           </div>
-          \${qHtml}
+          <div class="metric-box" style="background: white;">
+            <div class="metric-title">Temps Moyen (s)</div>
+            <div class="metric-value">\${avgLvlTime}</div>
+          </div>
         </div>
-      </details>
+        \${qHtml}
+      </div>
     `;
   }
   
   content.innerHTML = `
-    <div style="display: flex; gap: 15px; flex-wrap: wrap; width: 100%;">
-      <div class="metric-box">
-        <div class="metric-title">Total Players</div>
-        <div class="metric-value">\${players.length}</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-title">Score Moyen</div>
-        <div class="metric-value">\${avgScore}</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-title">Temps Moyen (s)</div>
-        <div class="metric-value">\${avgTime}s</div>
-      </div>
-      <div class="metric-box">
-        <div class="metric-title">Réussite Globale (%)</div>
-        <div class="metric-value">\${successRate}%</div>
-      </div>
-    </div>
-    
-    <div style="margin-top: 20px; width: 100%;">
-      <h3 style="margin-top:0; color: #1e3a8a;">Analytics Détaillés par Niveau</h3>
+    <div style="width: 100%;">
       \${insightsHtml || "<p style='color: #6b7280;'>Aucun niveau joué pour le moment.</p>"}
     </div>
   `;
