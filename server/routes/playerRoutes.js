@@ -13,6 +13,38 @@ import {
 const router = express.Router();
 
 /* ===============================
+   TEST EMAIL ENDPOINT (For Debugging)
+================================= */
+router.post("/test-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    console.log("Testing email sending to:", email);
+    console.log("From:", process.env.RESEND_FROM_EMAIL);
+    console.log(
+      "Resend API Key:",
+      process.env.RESEND_API_KEY ? "✓ Set" : "✗ Not set",
+    );
+
+    const result = await sendPlayerRegistrationConfirmation(email, "TestUser");
+
+    res.json({
+      message: "Test email result",
+      success: result.success,
+      error: result.error || null,
+      data: result.data || null,
+    });
+  } catch (error) {
+    console.error("Test endpoint error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+/* ===============================
    PLAYER LOGIN
 ================================= */
 router.post("/login", async (req, res) => {
@@ -104,7 +136,16 @@ router.post("/register", async (req, res) => {
     });
 
     // Send welcome email
-    await sendPlayerRegistrationConfirmation(email, username);
+    console.log("Sending welcome email to:", email);
+    const emailResult = await sendPlayerRegistrationConfirmation(
+      email,
+      username,
+    );
+    if (!emailResult.success) {
+      console.error("Email sending failed:", emailResult.error);
+    } else {
+      console.log("Welcome email sent successfully to:", email);
+    }
 
     // Generate token
     const token = jwt.sign(
@@ -160,13 +201,24 @@ router.post("/create", authMiddleware, async (req, res) => {
     });
 
     // Send email notification to admin with credentials
-    const admin = await Player.findOne({ createdBy: req.admin.id }).limit(1);
-    if (admin) {
-      // Get admin email from the request or database
-      const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL;
-      if (adminEmail) {
-        await sendAccountCreationEmail(adminEmail, email, password);
+    const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      console.log("Sending admin notification email to:", adminEmail);
+      const emailResult = await sendAccountCreationEmail(
+        adminEmail,
+        email,
+        password,
+      );
+      if (!emailResult.success) {
+        console.error("Admin email sending failed:", emailResult.error);
+      } else {
+        console.log(
+          "Admin notification email sent successfully to:",
+          adminEmail,
+        );
       }
+    } else {
+      console.warn("No admin email found to send notification");
     }
 
     res.json({ message: "Player created successfully", player });
