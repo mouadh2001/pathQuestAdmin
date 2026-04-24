@@ -5,6 +5,10 @@ import Player from "../models/player.js";
 import PlayerStat from "../models/playerStat.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import playerAuthMiddleware from "../middleware/playerAuthMiddleware.js";
+import {
+  sendAccountCreationEmail,
+  sendPlayerRegistrationConfirmation,
+} from "../services/emailService.js";
 
 const router = express.Router();
 
@@ -47,21 +51,129 @@ router.post("/login", async (req, res) => {
 });
 
 /* ===============================
+   PLAYER SELF-REGISTRATION
+================================= */
+router.post("/register", async (req, res) => {
+  try {
+    const { username, email, password, confirmPassword } = req.body;
+
+    // Validate input
+    if (!username || !email || !password || !confirmPassword) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Validate password strength (minimum 6 characters)
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    // Check if player already exists
+    const existingPlayer = await Player.findOne({
+      $or: [{ email }, { username }],
+    });
+    if (existingPlayer) {
+      return res.status(400).json({
+        message:
+          existingPlayer.email === email
+            ? "Email already registered"
+            : "Username already taken",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create player
+    const player = await Player.create({
+      username,
+      email,
+      password: hashedPassword,
+    });
+
+    // Send welcome email
+    await sendPlayerRegistrationConfirmation(email, username);
+
+    // Generate token
+    const token = jwt.sign(
+      { id: player._id, role: "player", username: player.username },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" },
+    );
+
+    res.status(201).json({
+      message: "Account created successfully! Welcome to PathQuest.",
+      token,
+      player: {
+        id: player._id,
+        username: player.username,
+        email: player.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error during registration" });
+  }
+});
+
+/* ===============================
    CREATE PLAYER (Admin Only)
 ================================= */
 router.post("/create", authMiddleware, async (req, res) => {
-  const { username, email, password } = req.body;
+  try {
+    const { username, email, password } = req.body;
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+    // Validate input
+    if (!username || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Missing username, email, or password" });
+    }
 
-  const player = await Player.create({
-    username,
-    email,
-    password: hashedPassword,
-    createdBy: req.admin.id,
-  });
+    // Check if player already exists
+    const existingPlayer = await Player.findOne({ email });
+    if (existingPlayer) {
+      return res
+        .status(400)
+        .json({ message: "Player with this email already exists" });
+    }
 
-  res.json(player);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const player = await Player.create({
+      username,
+      email,
+      password: hashedPassword,
+      createdBy: req.admin.id,
+    });
+
+    // Send email notification to admin with credentials
+    const admin = await Player.findOne({ createdBy: req.admin.id }).limit(1);
+    if (admin) {
+      // Get admin email from the request or database
+      const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL;
+      if (adminEmail) {
+        await sendAccountCreationEmail(adminEmail, email, password);
+      }
+    }
+
+    res.json({ message: "Player created successfully", player });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error creating player" });
+  }
 });
 
 /* ===============================
@@ -92,13 +204,21 @@ router.get("/admin/player/:id/history", authMiddleware, async (req, res) => {
 ================================= */
 const updatePlayerStats = async (req, res) => {
   try {
-    const { levelKey, score, correct, incorrect, time, questionStats = {}, metrics = {} } = req.body;
+    const {
+      levelKey,
+      score,
+      correct,
+      incorrect,
+      time,
+      questionStats = {},
+      metrics = {},
+    } = req.body;
     const player = await Player.findById(req.player.id);
 
     if (!player) {
       return res.status(404).json({ message: "Player not found" });
     }
-    
+
     const levelId = levelKey || "unknown_level";
 
     // Set the new level stats, replacing any previous attempt for this level
@@ -108,7 +228,7 @@ const updatePlayerStats = async (req, res) => {
       incorrect: Number(incorrect) || 0,
       time: Number(time) || 0,
       metrics,
-      questionStats
+      questionStats,
     });
 
     // Recalculate global stats to avoid unbounded accumulation
@@ -127,7 +247,9 @@ const updatePlayerStats = async (req, res) => {
     player.stats.score = totalScore;
     player.stats.correct = totalCorrect;
     player.stats.incorrect = totalIncorrect;
-    player.stats.time = (player.stats.time || 0) + (Number(metrics.sessionDuration) || Number(time) || 0);
+    player.stats.time =
+      (player.stats.time || 0) +
+      (Number(metrics.sessionDuration) || Number(time) || 0);
     player.stats.totalSessions = (player.stats.totalSessions || 0) + 1;
 
     await player.save();
