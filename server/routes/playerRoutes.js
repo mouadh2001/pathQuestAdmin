@@ -7,6 +7,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import playerAuthMiddleware from "../middleware/playerAuthMiddleware.js";
 import {
   sendAccountCreationEmail,
+  sendPlayerCredentialsEmail,
   sendPlayerRegistrationConfirmation,
 } from "../services/emailService.js";
 
@@ -24,10 +25,10 @@ router.post("/test-email", async (req, res) => {
     }
 
     console.log("Testing email sending to:", email);
-    console.log("From:", process.env.RESEND_FROM_EMAIL);
+    console.log("From:", process.env.MAILJET_FROM_EMAIL);
     console.log(
-      "Resend API Key:",
-      process.env.RESEND_API_KEY ? "✓ Set" : "✗ Not set",
+      "Mailjet API Key:",
+      process.env.MAILJET_API_KEY ? "✓ Set" : "✗ Not set",
     );
 
     const result = await sendPlayerRegistrationConfirmation(email, "TestUser");
@@ -199,6 +200,18 @@ router.post("/create", authMiddleware, async (req, res) => {
       password: hashedPassword,
       createdBy: req.admin.id,
     });
+
+    // Send email with credentials to the player
+    console.log("Sending player credentials email to:", email);
+    const playerEmailResult = await sendPlayerCredentialsEmail(email, password);
+    if (!playerEmailResult.success) {
+      console.error(
+        "Player credentials email sending failed:",
+        playerEmailResult.error,
+      );
+    } else {
+      console.log("Player credentials email sent successfully to:", email);
+    }
 
     // Send email notification to admin with credentials
     const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL;
