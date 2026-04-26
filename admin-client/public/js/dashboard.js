@@ -600,6 +600,8 @@ function renderGlobalStats(players) {
   });
 
   let insightsHtml = "";
+  let chartInstances = [];
+
   for (const [lvl, data] of Object.entries(levelAggregates)) {
     const avgLvlScore = (data.totalScore / data.playersCount).toFixed(1);
     const avgLvlTime = (data.totalTime / data.playersCount).toFixed(1);
@@ -619,6 +621,13 @@ function renderGlobalStats(players) {
         .join("");
 
       qHtml = `
+        <div style="margin-top: 25px;">
+          <h4 style="margin: 15px 0 15px 0; color: #374151;">First-Try Success Rate</h4>
+          <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+            <canvas id="chart-${lvl}" style="max-height: 300px;"></canvas>
+          </div>
+        </div>
+
         <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of ${data.playersCount} players total who played this level)</h4>
         <div style="overflow-x: auto;">
           <table class="question-stats" style="width: 100%;">
@@ -633,6 +642,13 @@ function renderGlobalStats(players) {
           </table>
         </div>
       `;
+
+      // Store data for chart rendering
+      chartInstances.push({
+        levelKey: lvl,
+        questions: data.questions,
+        playersCount: data.playersCount,
+      });
     }
 
     insightsHtml += `
@@ -659,6 +675,137 @@ function renderGlobalStats(players) {
       ${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
     </div>
   `;
+
+  // Render charts after DOM is updated
+  setTimeout(() => {
+    chartInstances.forEach(({ levelKey, questions, playersCount }) => {
+      renderFirstTryChart(levelKey, questions, playersCount);
+    });
+  }, 0);
+}
+
+function renderFirstTryChart(levelKey, questions, playersCount) {
+  const canvasId = `chart-${levelKey}`;
+  const canvas = document.getElementById(canvasId);
+
+  if (!canvas) return;
+
+  const questionIds = Object.keys(questions).sort();
+  const firstTryData = questionIds.map(
+    (qId) => questions[qId].firstTrySuccesses,
+  );
+
+  // Get the 2D context
+  const ctx = canvas.getContext("2d");
+
+  // Destroy existing chart if it exists
+  if (canvas.chartInstance) {
+    canvas.chartInstance.destroy();
+  }
+
+  // Create new chart
+  canvas.chartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: questionIds,
+      datasets: [
+        {
+          label: "Players with First-Try Success",
+          data: firstTryData,
+          backgroundColor: "#10b981",
+          borderColor: "#059669",
+          borderWidth: 2,
+          borderRadius: 6,
+          hoverBackgroundColor: "#059669",
+          tension: 0.1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          labels: {
+            font: {
+              size: 14,
+              weight: "bold",
+            },
+            color: "#374151",
+            padding: 15,
+          },
+        },
+        tooltip: {
+          enabled: true,
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
+          titleFont: {
+            size: 12,
+            weight: "bold",
+          },
+          bodyFont: {
+            size: 12,
+          },
+          padding: 12,
+          cornerRadius: 6,
+          callbacks: {
+            label: function (context) {
+              return `${context.dataset.label}: ${context.parsed.y} players`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Questions",
+            font: {
+              size: 13,
+              weight: "bold",
+            },
+            color: "#374151",
+            padding: 10,
+          },
+          ticks: {
+            font: {
+              size: 12,
+            },
+            color: "#6b7280",
+          },
+          grid: {
+            display: false,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          max: playersCount,
+          title: {
+            display: true,
+            text: "Number of Players (First-Try Success)",
+            font: {
+              size: 13,
+              weight: "bold",
+            },
+            color: "#374151",
+            padding: 10,
+          },
+          ticks: {
+            stepSize: 1,
+            font: {
+              size: 12,
+            },
+            color: "#6b7280",
+          },
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)",
+            drawBorder: false,
+          },
+        },
+      },
+    },
+  });
 }
 
 /**
