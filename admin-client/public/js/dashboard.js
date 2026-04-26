@@ -7,13 +7,24 @@ function getToken() {
   return localStorage.getItem("adminToken");
 }
 
+// Professional Notification System
+function showNotification(message, type = "success", duration = 4000) {
+  const notification = document.getElementById("notification");
+  notification.textContent = message;
+  notification.className = `notification ${type} show`;
+
+  setTimeout(() => {
+    notification.classList.remove("show");
+  }, duration);
+}
+
 async function createPlayer() {
   const username = document.getElementById("username").value;
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
   const token = getToken();
-  if (!token) return alert("Not authorized");
+  if (!token) return showNotification("Not authorized", "error");
 
   try {
     const res = await fetch(`${API_URL}/create`, {
@@ -28,14 +39,14 @@ async function createPlayer() {
     const data = await res.json();
 
     if (res.ok) {
-      alert("Player created");
+      showNotification("Player created successfully", "success");
       loadPlayers();
     } else {
-      alert(data.message || "Error");
+      showNotification(data.message || "Error creating player", "error");
     }
   } catch (err) {
     console.error(err);
-    alert("Server error");
+    showNotification("Server error", "error");
   }
 }
 
@@ -45,7 +56,7 @@ let currentSortKey = "score";
 
 async function loadPlayers() {
   const token = getToken();
-  if (!token) return alert("Not authorized");
+  if (!token) return showNotification("Not authorized", "error");
 
   try {
     const res = await fetch(`${API_URL}/all`, {
@@ -414,10 +425,10 @@ async function renderPlayerDetails(player) {
         scales: {
           y: {
             beginAtZero: true,
-            max: 100
-          }
-        }
-      }
+            max: 100,
+          },
+        },
+      },
     });
   }
 }
@@ -442,63 +453,73 @@ window.onload = () => {
 
 async function exportPlayerToExcel(player, historyData) {
   if (!historyData || historyData.length === 0) {
-    alert("No history data available for this student.");
+    showNotification("No history data available for this student.", "warning");
     return;
   }
 
   // 1. Initialize Workbook
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'PathQuest System';
+  workbook.creator = "PathQuest System";
   workbook.created = new Date();
 
   const styleHeaderRow = (row) => {
-    row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
-    row.alignment = { vertical: 'middle', horizontal: 'center' };
+    row.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    row.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4F81BD" },
+    };
+    row.alignment = { vertical: "middle", horizontal: "center" };
     row.height = 25;
   };
 
   // --- SHEET 1: STUDENT SUMMARY ---
-  const ws1 = workbook.addWorksheet('Student Summary');
-  ws1.columns = [{ key: 'metric', width: 30 }, { key: 'value', width: 30 }];
-  
-  ws1.addRow(['STUDENT PERFORMANCE REPORT']).font = { size: 16, bold: true };
-  ws1.addRow(['Export Date', new Date().toLocaleString()]);
+  const ws1 = workbook.addWorksheet("Student Summary");
+  ws1.columns = [
+    { key: "metric", width: 30 },
+    { key: "value", width: 30 },
+  ];
+
+  ws1.addRow(["STUDENT PERFORMANCE REPORT"]).font = { size: 16, bold: true };
+  ws1.addRow(["Export Date", new Date().toLocaleString()]);
   ws1.addRow([]);
 
   const summaryData = [
-    ['Metric', 'Value'],
-    ['Student Username', player.username],
-    ['Student Email', player.email],
-    ['Total Registered Sessions', historyData.length],
-    ['Total Play Time (s)', player.stats?.time || 0]
+    ["Metric", "Value"],
+    ["Student Username", player.username],
+    ["Student Email", player.email],
+    ["Total Registered Sessions", historyData.length],
+    ["Total Play Time (s)", player.stats?.time || 0],
   ];
-  
+
   summaryData.forEach((r, i) => {
     const row = ws1.addRow(r);
     if (i === 0) styleHeaderRow(row);
   });
 
   // --- SHEET 2: SESSION LOGS ---
-  const ws2 = workbook.addWorksheet('Session Logs');
+  const ws2 = workbook.addWorksheet("Session Logs");
   ws2.columns = [
-    { header: 'Date/Time', key: 'date', width: 22 },
-    { header: 'Level', key: 'level', width: 15 },
-    { header: 'Score', key: 'score', width: 10 },
-    { header: 'Success (1st try)', key: 'successCount', width: 18 },
-    { header: 'Success Rate', key: 'successRate', width: 15 },
-    { header: 'Total Time (s)', key: 'time', width: 15 },
-    { header: 'Obs. Time (s)', key: 'obsTime', width: 15 },
-    { header: 'Avg. Resp. Time (s)', key: 'avgRespTime', width: 20 },
-    { header: 'Attempts', key: 'attempts', width: 12 }
+    { header: "Date/Time", key: "date", width: 22 },
+    { header: "Level", key: "level", width: 15 },
+    { header: "Score", key: "score", width: 10 },
+    { header: "Success (1st try)", key: "successCount", width: 18 },
+    { header: "Success Rate", key: "successRate", width: 15 },
+    { header: "Total Time (s)", key: "time", width: 15 },
+    { header: "Obs. Time (s)", key: "obsTime", width: 15 },
+    { header: "Avg. Resp. Time (s)", key: "avgRespTime", width: 20 },
+    { header: "Attempts", key: "attempts", width: 12 },
   ];
-  
+
   styleHeaderRow(ws2.getRow(1));
 
-  historyData.forEach(h => {
+  historyData.forEach((h) => {
     const metrics = h.metrics || {};
     const totalQ = (h.correct || 0) + (h.incorrect || 0);
-    const successRate = totalQ > 0 ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1) + '%' : '0%';
+    const successRate =
+      totalQ > 0
+        ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1) + "%"
+        : "0%";
 
     ws2.addRow({
       date: new Date(h.pushedAt).toLocaleString(),
@@ -509,15 +530,17 @@ async function exportPlayerToExcel(player, historyData) {
       time: h.time || 0,
       obsTime: metrics.observationTime || 0,
       avgRespTime: metrics.averageResponseTime || 0,
-      attempts: metrics.levelAttempts || 1
+      attempts: metrics.levelAttempts || 1,
     });
   });
 
   // --- DOWNLOAD ---
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `PathQuest_Report_${player.username.replace(/\s+/g, "_")}_${new Date().getTime()}.xlsx`;
   a.click();
@@ -532,12 +555,12 @@ function renderGlobalStats(players) {
     container.classList.add("hidden");
     return;
   }
-  
+
   container.classList.remove("hidden");
-  
+
   // Accumulateur pour les insights par niveau
   const levelAggregates = {};
-  
+
   players.forEach((p) => {
     if (p.levelStats) {
       for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
@@ -546,17 +569,22 @@ function renderGlobalStats(players) {
             playersCount: 0,
             totalScore: 0,
             totalTime: 0,
-            questions: {}
+            questions: {},
           };
         }
         levelAggregates[levelKey].playersCount += 1;
         levelAggregates[levelKey].totalScore += lStats.score || 0;
-        levelAggregates[levelKey].totalTime += lStats.time || lStats.metrics?.sessionDuration || 0;
-        
+        levelAggregates[levelKey].totalTime +=
+          lStats.time || lStats.metrics?.sessionDuration || 0;
+
         if (lStats.questionStats) {
           for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
             if (!levelAggregates[levelKey].questions[qId]) {
-              levelAggregates[levelKey].questions[qId] = { attemptedBy: 0, correctAnswers: 0, firstTrySuccesses: 0 };
+              levelAggregates[levelKey].questions[qId] = {
+                attemptedBy: 0,
+                correctAnswers: 0,
+                firstTrySuccesses: 0,
+              };
             }
             levelAggregates[levelKey].questions[qId].attemptedBy += 1;
             if (qStat.correct > 0) {
@@ -570,24 +598,26 @@ function renderGlobalStats(players) {
       }
     }
   });
-  
+
   let insightsHtml = "";
   for (const [lvl, data] of Object.entries(levelAggregates)) {
     const avgLvlScore = (data.totalScore / data.playersCount).toFixed(1);
     const avgLvlTime = (data.totalTime / data.playersCount).toFixed(1);
-    
+
     let qHtml = "";
     if (Object.keys(data.questions).length > 0) {
-      const qRows = Object.entries(data.questions).map(([qId, counts]) => {
-        return `
+      const qRows = Object.entries(data.questions)
+        .map(([qId, counts]) => {
+          return `
           <tr>
             <td>${qId}</td>
             <td style="text-align: center; font-weight: bold; color: #0284c7;">${counts.correctAnswers}</td>
             <td style="text-align: center; font-weight: bold; color: #16a34a;">${counts.firstTrySuccesses}</td>
           </tr>
         `;
-      }).join("");
-      
+        })
+        .join("");
+
       qHtml = `
         <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of ${data.playersCount} players total who played this level)</h4>
         <div style="overflow-x: auto;">
@@ -604,7 +634,7 @@ function renderGlobalStats(players) {
         </div>
       `;
     }
-    
+
     insightsHtml += `
       <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
         <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Level : ${lvl.toUpperCase()}</h3>
@@ -623,7 +653,7 @@ function renderGlobalStats(players) {
       </div>
     `;
   }
-  
+
   content.innerHTML = `
     <div style="width: 100%;">
       ${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
@@ -637,62 +667,84 @@ function renderGlobalStats(players) {
  */
 async function exportGlobalExcel() {
   if (!playersCache || playersCache.length === 0) {
-    alert("No player data available.");
+    showNotification("No player data available.", "warning");
     return;
   }
 
   // 1. Initialize Workbook
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'PathQuest System';
+  workbook.creator = "PathQuest System";
   workbook.created = new Date();
 
   // Helper function to style headers
   const styleHeaderRow = (row) => {
-    row.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
-    row.alignment = { vertical: 'middle', horizontal: 'center' };
+    row.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    row.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF4F81BD" },
+    };
+    row.alignment = { vertical: "middle", horizontal: "center" };
     row.height = 25;
   };
 
   // --- SHEET 1: COHORT SUMMARY ---
-  const ws1 = workbook.addWorksheet('Cohort Summary');
-  ws1.columns = [{ key: 'metric', width: 30 }, { key: 'value', width: 25 }];
-  
-  const totalScore = playersCache.reduce((sum, p) => sum + (p.stats?.score || 0), 0);
-  const totalCorrect = playersCache.reduce((sum, p) => sum + (p.stats?.correct || 0), 0);
-  const totalIncorrect = playersCache.reduce((sum, p) => sum + (p.stats?.incorrect || 0), 0);
-  
-  ws1.addRow(['GLOBAL COHORT SUMMARY']).font = { size: 16, bold: true };
-  ws1.addRow(['Export Date', new Date().toLocaleString()]);
-  ws1.addRow([]);
-  
-  const summaryData = [
-    ['Metric', 'Value'],
-    ['Total Players', playersCache.length],
-    ['Avg Global Score', (totalScore / playersCache.length).toFixed(1)],
-    ['Global Success Rate', totalCorrect + totalIncorrect > 0 ? ((totalCorrect / (totalCorrect + totalIncorrect)) * 100).toFixed(1) + '%' : '0%']
+  const ws1 = workbook.addWorksheet("Cohort Summary");
+  ws1.columns = [
+    { key: "metric", width: 30 },
+    { key: "value", width: 25 },
   ];
-  
+
+  const totalScore = playersCache.reduce(
+    (sum, p) => sum + (p.stats?.score || 0),
+    0,
+  );
+  const totalCorrect = playersCache.reduce(
+    (sum, p) => sum + (p.stats?.correct || 0),
+    0,
+  );
+  const totalIncorrect = playersCache.reduce(
+    (sum, p) => sum + (p.stats?.incorrect || 0),
+    0,
+  );
+
+  ws1.addRow(["GLOBAL COHORT SUMMARY"]).font = { size: 16, bold: true };
+  ws1.addRow(["Export Date", new Date().toLocaleString()]);
+  ws1.addRow([]);
+
+  const summaryData = [
+    ["Metric", "Value"],
+    ["Total Players", playersCache.length],
+    ["Avg Global Score", (totalScore / playersCache.length).toFixed(1)],
+    [
+      "Global Success Rate",
+      totalCorrect + totalIncorrect > 0
+        ? ((totalCorrect / (totalCorrect + totalIncorrect)) * 100).toFixed(1) +
+          "%"
+        : "0%",
+    ],
+  ];
+
   summaryData.forEach((r, i) => {
     const row = ws1.addRow(r);
     if (i === 0) styleHeaderRow(row);
   });
 
   // --- SHEET 2: PLAYER DATA ---
-  const ws2 = workbook.addWorksheet('Player Data');
+  const ws2 = workbook.addWorksheet("Player Data");
   ws2.columns = [
-    { header: 'ID', key: 'id', width: 15 },
-    { header: 'Username', key: 'username', width: 20 },
-    { header: 'Email', key: 'email', width: 25 },
-    { header: 'Reg. Date', key: 'date', width: 15 },
-    { header: 'Total Score', key: 'score', width: 12 },
-    { header: 'Total Sessions', key: 'sessions', width: 15 },
-    { header: 'Success Rate', key: 'sr', width: 12 }
+    { header: "ID", key: "id", width: 15 },
+    { header: "Username", key: "username", width: 20 },
+    { header: "Email", key: "email", width: 25 },
+    { header: "Reg. Date", key: "date", width: 15 },
+    { header: "Total Score", key: "score", width: 12 },
+    { header: "Total Sessions", key: "sessions", width: 15 },
+    { header: "Success Rate", key: "sr", width: 12 },
   ];
-  
+
   styleHeaderRow(ws2.getRow(1));
-  
-  playersCache.forEach(p => {
+
+  playersCache.forEach((p) => {
     const total = (p.stats?.correct || 0) + (p.stats?.incorrect || 0);
     ws2.addRow({
       id: p._id,
@@ -701,23 +753,23 @@ async function exportGlobalExcel() {
       date: new Date(p.createdAt).toLocaleDateString(),
       score: p.stats?.score || 0,
       sessions: p.stats?.totalSessions || 0,
-      sr: total > 0 ? ((p.stats.correct / total) * 100).toFixed(1) + '%' : '0%'
+      sr: total > 0 ? ((p.stats.correct / total) * 100).toFixed(1) + "%" : "0%",
     });
   });
 
   // --- SHEET 3: LEVEL DETAILS ---
-  const ws3 = workbook.addWorksheet('Level Details');
+  const ws3 = workbook.addWorksheet("Level Details");
   ws3.columns = [
-    { header: 'Username', key: 'username', width: 20 },
-    { header: 'Level', key: 'level', width: 15 },
-    { header: 'Score', key: 'score', width: 10 },
-    { header: 'Duration (s)', key: 'time', width: 15 },
-    { header: 'Attempts', key: 'attempts', width: 10 }
+    { header: "Username", key: "username", width: 20 },
+    { header: "Level", key: "level", width: 15 },
+    { header: "Score", key: "score", width: 10 },
+    { header: "Duration (s)", key: "time", width: 15 },
+    { header: "Attempts", key: "attempts", width: 10 },
   ];
-  
+
   styleHeaderRow(ws3.getRow(1));
-  
-  playersCache.forEach(p => {
+
+  playersCache.forEach((p) => {
     if (p.levelStats) {
       Object.entries(p.levelStats).forEach(([levelKey, lStats]) => {
         ws3.addRow({
@@ -725,26 +777,26 @@ async function exportGlobalExcel() {
           level: levelKey.toUpperCase(),
           score: lStats.score || 0,
           time: lStats.time || lStats.metrics?.sessionDuration || 0,
-          attempts: lStats.metrics?.levelAttempts || 1
+          attempts: lStats.metrics?.levelAttempts || 1,
         });
       });
     }
   });
 
   // --- SHEET 4: QUESTION PERFORMANCE ---
-  const ws4 = workbook.addWorksheet('Question Performance');
+  const ws4 = workbook.addWorksheet("Question Performance");
   ws4.columns = [
-    { header: 'Level', key: 'level', width: 15 },
-    { header: 'Question ID', key: 'qId', width: 20 },
-    { header: 'Attempted By (Players)', key: 'attempted', width: 25 },
-    { header: 'Correct Answers (Final)', key: 'correct', width: 25 },
-    { header: '1st Try Successes', key: 'firstTry', width: 20 }
+    { header: "Level", key: "level", width: 15 },
+    { header: "Question ID", key: "qId", width: 20 },
+    { header: "Attempted By (Players)", key: "attempted", width: 25 },
+    { header: "Correct Answers (Final)", key: "correct", width: 25 },
+    { header: "1st Try Successes", key: "firstTry", width: 20 },
   ];
-  
+
   styleHeaderRow(ws4.getRow(1));
-  
+
   const levelAggs = {};
-  
+
   playersCache.forEach((p) => {
     if (p.levelStats) {
       for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
@@ -753,16 +805,21 @@ async function exportGlobalExcel() {
             playersCount: 0,
             totalScore: 0,
             totalTime: 0,
-            questions: {}
+            questions: {},
           };
         }
         levelAggs[levelKey].playersCount += 1;
         levelAggs[levelKey].totalScore += lStats.score || 0;
-        levelAggs[levelKey].totalTime += lStats.time || lStats.metrics?.sessionDuration || 0;
+        levelAggs[levelKey].totalTime +=
+          lStats.time || lStats.metrics?.sessionDuration || 0;
         if (lStats.questionStats) {
           for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
             if (!levelAggs[levelKey].questions[qId]) {
-              levelAggs[levelKey].questions[qId] = { attemptedBy: 0, correctAnswers: 0, firstTrySuccesses: 0 };
+              levelAggs[levelKey].questions[qId] = {
+                attemptedBy: 0,
+                correctAnswers: 0,
+                firstTrySuccesses: 0,
+              };
             }
             levelAggs[levelKey].questions[qId].attemptedBy += 1;
             if (qStat.correct > 0) {
@@ -784,36 +841,44 @@ async function exportGlobalExcel() {
         qId: qId,
         attempted: counts.attemptedBy,
         correct: counts.correctAnswers,
-        firstTry: counts.firstTrySuccesses
+        firstTry: counts.firstTrySuccesses,
       });
     }
   }
 
   // --- SHEET 5: LEVEL PERFORMANCE ---
-  const ws5 = workbook.addWorksheet('Level Performance');
+  const ws5 = workbook.addWorksheet("Level Performance");
   ws5.columns = [
-    { header: 'Level', key: 'level', width: 20 },
-    { header: 'Players Count', key: 'playersCount', width: 15 },
-    { header: 'Average Score', key: 'avgScore', width: 15 },
-    { header: 'Average Time (s)', key: 'avgTime', width: 20 }
+    { header: "Level", key: "level", width: 20 },
+    { header: "Players Count", key: "playersCount", width: 15 },
+    { header: "Average Score", key: "avgScore", width: 15 },
+    { header: "Average Time (s)", key: "avgTime", width: 20 },
   ];
-  
+
   styleHeaderRow(ws5.getRow(1));
-  
+
   for (const [lvl, data] of Object.entries(levelAggs)) {
     ws5.addRow({
       level: lvl.toUpperCase(),
       playersCount: data.playersCount,
-      avgScore: data.playersCount > 0 ? Number((data.totalScore / data.playersCount).toFixed(1)) : 0,
-      avgTime: data.playersCount > 0 ? Number((data.totalTime / data.playersCount).toFixed(1)) : 0
+      avgScore:
+        data.playersCount > 0
+          ? Number((data.totalScore / data.playersCount).toFixed(1))
+          : 0,
+      avgTime:
+        data.playersCount > 0
+          ? Number((data.totalTime / data.playersCount).toFixed(1))
+          : 0,
     });
   }
 
   // --- DOWNLOAD ---
   const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `PathQuest_Export_${new Date().toISOString().slice(0, 10)}.xlsx`;
   a.click();
