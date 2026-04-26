@@ -25,10 +25,10 @@ router.post("/test-email", async (req, res) => {
     }
 
     console.log("Testing email sending to:", email);
-    console.log("From:", process.env.MAILJET_FROM_EMAIL);
+    console.log("From:", process.env.EMAIL_USER);
     console.log(
-      "Mailjet API Key:",
-      process.env.MAILJET_API_KEY ? "✓ Set" : "✗ Not set",
+      "Email Password:",
+      process.env.EMAIL_PASSWORD ? "✓ Set" : "✗ Not set",
     );
 
     const result = await sendPlayerRegistrationConfirmation(email, "TestUser");
