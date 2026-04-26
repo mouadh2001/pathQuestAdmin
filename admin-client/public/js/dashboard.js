@@ -600,7 +600,7 @@ function renderGlobalStats(players) {
   });
 
   let insightsHtml = "";
-  let chartInstances = [];
+  let chartData = null;
 
   for (const [lvl, data] of Object.entries(levelAggregates)) {
     const avgLvlScore = (data.totalScore / data.playersCount).toFixed(1);
@@ -621,13 +621,6 @@ function renderGlobalStats(players) {
         .join("");
 
       qHtml = `
-        <div style="margin-top: 25px;">
-          <h4 style="margin: 15px 0 15px 0; color: #374151;">First-Try Success Rate</h4>
-          <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
-            <canvas id="chart-${lvl}" style="max-height: 300px;"></canvas>
-          </div>
-        </div>
-
         <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of ${data.playersCount} players total who played this level)</h4>
         <div style="overflow-x: auto;">
           <table class="question-stats" style="width: 100%;">
@@ -642,13 +635,6 @@ function renderGlobalStats(players) {
           </table>
         </div>
       `;
-
-      // Store data for chart rendering
-      chartInstances.push({
-        levelKey: lvl,
-        questions: data.questions,
-        playersCount: data.playersCount,
-      });
     }
 
     insightsHtml += `
@@ -670,69 +656,107 @@ function renderGlobalStats(players) {
     `;
   }
 
+  // Prepare data for global chart
+  chartData = prepareGlobalChartData(levelAggregates);
+
   content.innerHTML = `
+    <div style="width: 100%; margin-bottom: 30px;">
+      <h3 style="color: #1e3a8a; margin-bottom: 15px;">Global First-Try Success Overview</h3>
+      <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <canvas id="global-chart" style="max-height: 400px;"></canvas>
+      </div>
+    </div>
     <div style="width: 100%;">
       ${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
     </div>
   `;
 
-  // Render charts after DOM is updated
+  // Render global chart after DOM is updated
   setTimeout(() => {
-    chartInstances.forEach(({ levelKey, questions, playersCount }) => {
-      renderFirstTryChart(levelKey, questions, playersCount);
-    });
+    if (chartData && chartData.labels.length > 0) {
+      renderGlobalFirstTryChart(chartData);
+    }
   }, 0);
 }
 
-function renderFirstTryChart(levelKey, questions, playersCount) {
-  const canvasId = `chart-${levelKey}`;
-  const canvas = document.getElementById(canvasId);
+function prepareGlobalChartData(levelAggregates) {
+  const labels = [];
+  const data = [];
+  const colors = [];
+  const levelNames = [];
+  let lastLevelIndex = -1;
 
+  const colorPalette = [
+    "#3b82f6",
+    "#10b981",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#ec4899",
+    "#06b6d4",
+    "#6366f1",
+    "#14b8a6",
+    "#f97316",
+  ];
+
+  Object.entries(levelAggregates)
+    .sort()
+    .forEach((entry, levelIdx) => {
+      const [levelKey, levelData] = entry;
+      const questions = Object.keys(levelData.questions).sort();
+
+      questions.forEach((qId) => {
+        labels.push(qId);
+        data.push(levelData.questions[qId].firstTrySuccesses);
+        colors.push(colorPalette[levelIdx % colorPalette.length]);
+      });
+
+      lastLevelIndex = labels.length - 1;
+      levelNames.push({
+        name: levelKey.toUpperCase(),
+        endIndex: lastLevelIndex,
+      });
+    });
+
+  return { labels, data, colors, levelNames };
+}
+
+function renderGlobalFirstTryChart(chartData) {
+  const canvas = document.getElementById("global-chart");
   if (!canvas) return;
 
-  const questionIds = Object.keys(questions).sort();
-  const firstTryData = questionIds.map(
-    (qId) => questions[qId].firstTrySuccesses,
-  );
-
-  // Get the 2D context
   const ctx = canvas.getContext("2d");
 
-  // Destroy existing chart if it exists
   if (canvas.chartInstance) {
     canvas.chartInstance.destroy();
   }
 
-  // Create new chart
   canvas.chartInstance = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: questionIds,
+      labels: chartData.labels,
       datasets: [
         {
           label: "Players with First-Try Success",
-          data: firstTryData,
-          backgroundColor: "#10b981",
-          borderColor: "#059669",
+          data: chartData.data,
+          backgroundColor: chartData.colors,
+          borderColor: chartData.colors.map((c) => darkenColor(c)),
           borderWidth: 2,
           borderRadius: 6,
-          hoverBackgroundColor: "#059669",
-          tension: 0.1,
+          hoverBackgroundColor: chartData.colors.map((c) => darkenColor(c)),
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      indexAxis: undefined,
       plugins: {
         legend: {
           display: true,
           position: "top",
           labels: {
-            font: {
-              size: 14,
-              weight: "bold",
-            },
+            font: { size: 14, weight: "bold" },
             color: "#374151",
             padding: 15,
           },
@@ -740,16 +764,19 @@ function renderFirstTryChart(levelKey, questions, playersCount) {
         tooltip: {
           enabled: true,
           backgroundColor: "rgba(0, 0, 0, 0.8)",
-          titleFont: {
-            size: 12,
-            weight: "bold",
-          },
-          bodyFont: {
-            size: 12,
-          },
+          titleFont: { size: 12, weight: "bold" },
+          bodyFont: { size: 12 },
           padding: 12,
           cornerRadius: 6,
           callbacks: {
+            title: function (context) {
+              const index = context[0].dataIndex;
+              const labels = chartData.labels;
+              const levelInfo = chartData.levelNames.find(
+                (l) => index <= l.endIndex,
+              );
+              return `${levelInfo?.name || ""} - ${labels[index]}`;
+            },
             label: function (context) {
               return `${context.dataset.label}: ${context.parsed.y} players`;
             },
@@ -760,52 +787,81 @@ function renderFirstTryChart(levelKey, questions, playersCount) {
         x: {
           title: {
             display: true,
-            text: "Questions",
-            font: {
-              size: 13,
-              weight: "bold",
-            },
+            text: "Questions by Level",
+            font: { size: 13, weight: "bold" },
             color: "#374151",
             padding: 10,
           },
           ticks: {
-            font: {
-              size: 12,
-            },
+            font: { size: 11 },
             color: "#6b7280",
           },
-          grid: {
-            display: false,
-          },
+          grid: { display: false },
         },
         y: {
           beginAtZero: true,
-          max: playersCount,
           title: {
             display: true,
             text: "Number of Players (First-Try Success)",
-            font: {
-              size: 13,
-              weight: "bold",
-            },
+            font: { size: 13, weight: "bold" },
             color: "#374151",
             padding: 10,
           },
           ticks: {
             stepSize: 1,
-            font: {
-              size: 12,
-            },
+            font: { size: 12 },
             color: "#6b7280",
           },
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)",
-            drawBorder: false,
-          },
+          grid: { color: "rgba(0, 0, 0, 0.05)", drawBorder: false },
         },
       },
     },
   });
+
+  // Add level labels below the chart
+  addLevelLabels(canvas, chartData.levelNames, chartData.labels);
+}
+
+function addLevelLabels(canvas, levelNames, labels) {
+  const container = canvas.parentElement;
+  const existingLabel = container.querySelector(".level-labels");
+  if (existingLabel) existingLabel.remove();
+
+  const labelDiv = document.createElement("div");
+  labelDiv.className = "level-labels";
+  labelDiv.style.cssText = `
+    display: flex;
+    margin-top: 20px;
+    position: relative;
+    font-size: 12px;
+    font-weight: bold;
+    color: #1e3a8a;
+  `;
+
+  let currentIndex = 0;
+  levelNames.forEach((level) => {
+    const questionsInLevel = level.endIndex - currentIndex + 1;
+    const labelElement = document.createElement("div");
+    labelElement.style.cssText = `
+      flex: 0 0 calc(${(questionsInLevel / labels.length) * 100}%);
+      text-align: center;
+      padding: 0 5px;
+    `;
+    labelElement.textContent = level.name;
+    labelDiv.appendChild(labelElement);
+    currentIndex = level.endIndex + 1;
+  });
+
+  container.appendChild(labelDiv);
+}
+
+function darkenColor(color) {
+  // Convert hex to RGB, darken, and return
+  const hex = color.replace("#", "");
+  const r = Math.max(0, parseInt(hex.substring(0, 2), 16) - 30);
+  const g = Math.max(0, parseInt(hex.substring(2, 4), 16) - 30);
+  const b = Math.max(0, parseInt(hex.substring(4, 6), 16) - 30);
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**
