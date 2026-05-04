@@ -286,15 +286,23 @@ const updatePlayerStats = async (req, res) => {
 
     const levelId = levelKey || "unknown_level";
 
-    // Set the new level stats, replacing any previous attempt for this level
-    player.levelStats.set(levelId, {
-      score: Number(score) || 0,
-      correct: Number(correct) || 0,
-      incorrect: Number(incorrect) || 0,
-      time: Number(time) || 0,
-      metrics,
-      questionStats,
-    });
+    // Check if the player already has stats for this level
+    const existingLevelStats = player.levelStats.get(levelId);
+    const existingScore = existingLevelStats ? existingLevelStats.score : -1;
+    const incomingScore = Number(score) || 0;
+
+    // Only update the level stats (which affect the total score) if the new score is better
+    // This allows the player to replay levels without hurting their total global score
+    if (incomingScore > existingScore) {
+      player.levelStats.set(levelId, {
+        score: incomingScore,
+        correct: Number(correct) || 0,
+        incorrect: Number(incorrect) || 0,
+        time: Number(time) || 0,
+        metrics,
+        questionStats,
+      });
+    }
 
     // Recalculate global stats to avoid unbounded accumulation
     // Note: totalTime and totalSessions now incrementally grow based on the push event
