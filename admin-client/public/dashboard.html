@@ -1,102 +1,159 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <title>Admin Dashboard</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - Patho Quest</title>
     <link rel="stylesheet" href="./css/dashboard.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
     <!-- Notification Toast -->
     <div id="notification" class="notification"></div>
 
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="nav-brand">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        Patho Quest Admin
+      </div>
+      <div class="nav-links">
+        <button class="nav-link active" onclick="switchTab('players-tab')">Players Management</button>
+        <button class="nav-link" onclick="switchTab('gamedata-tab')">Game Data</button>
+        <button class="nav-link btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
     <div class="container">
-      <div class="form-card">
-        <h2>Create Player</h2>
-        <input type="text" id="username" placeholder="Username" />
-        <input type="email" id="email" placeholder="Email" />
-        <input type="password" id="password" placeholder="Password" />
-        <button onclick="createPlayer()">Create Player</button>
-      </div>
-
-      <div
-        id="globalStats"
-        class="form-card hidden"
-        style="margin-bottom: 20px"
-      >
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-          "
-        >
-          <h2 style="margin: 0; color: #1e3a8a">Global Summary (Cohort)</h2>
-          <button
-            onclick="exportGlobalExcel()"
-            style="
-              padding: 10px 20px;
-              background: #10b981;
-              color: white;
-              border: none;
-              border-radius: 8px;
-              font-weight: bold;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            "
-          >
-            <svg
-              style="width: 18px; height: 18px"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              ></path>
-            </svg>
-            Export Global Data (Excel)
-          </button>
+      
+      <!-- PLAYERS MANAGEMENT TAB -->
+      <section id="players-tab" class="tab-content active">
+        <div class="form-card">
+          <h2>Create Player</h2>
+          <div class="input-group-row">
+            <input type="text" id="username" placeholder="Username" />
+            <input type="email" id="email" placeholder="Email" />
+            <input type="password" id="password" placeholder="Password" />
+            <button onclick="createPlayer()" class="btn-primary">Create Player</button>
+          </div>
         </div>
-        <div
-          id="globalStatsContent"
-          style="display: flex; gap: 15px; flex-wrap: wrap"
-        ></div>
-      </div>
 
-      <h2>Players List</h2>
-      <div class="players-controls">
-        <span>Sort by:</span>
-        <button id="sortScoreBtn" type="button">Score</button>
-        <button id="sortTimeBtn" type="button">Time</button>
-        <button id="sortCreatedBtn" type="button">Created</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Score</th>
-            <th>Time (s)</th>
-            <th>Created At</th>
-          </tr>
-        </thead>
-        <tbody id="playersTable"></tbody>
-      </table>
+        <div id="globalStats" class="form-card hidden" style="margin-bottom: 20px">
+          <div class="flex-between mb-15">
+            <h2 style="margin: 0;">Global Summary (Cohort)</h2>
+            <button onclick="exportGlobalExcel()" class="btn-success">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              Export Global Data (Excel)
+            </button>
+          </div>
+          <div id="globalStatsContent" style="display: flex; gap: 15px; flex-wrap: wrap"></div>
+        </div>
 
-      <div id="playerDetails" class="player-details hidden">
-        <h2>Player Details</h2>
-        <div id="detailsContent"></div>
-      </div>
+        <div class="card">
+          <h2>Players List</h2>
+          <div class="players-controls">
+            <span>Sort by:</span>
+            <button id="sortScoreBtn" type="button" class="btn-secondary">Score</button>
+            <button id="sortTimeBtn" type="button" class="btn-secondary">Time</button>
+            <button id="sortCreatedBtn" type="button" class="btn-secondary">Created</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Score</th>
+                  <th>Time (s)</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody id="playersTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="playerDetails" class="player-details hidden">
+          <h2>Player Details</h2>
+          <div id="detailsContent"></div>
+        </div>
+      </section>
+
+      <!-- GAME DATA TAB -->
+      <section id="gamedata-tab" class="tab-content">
+        <div class="form-card">
+          <div class="flex-between mb-15">
+            <h2>Game Data Management</h2>
+            <div class="level-selector">
+              <label for="levelSelect"><strong>Select Level:</strong></label>
+              <select id="levelSelect" onchange="loadGameData()">
+                <option value="level1">Level 1</option>
+                <option value="level2">Level 2</option>
+                <option value="level3">Level 3</option>
+                <option value="level4">Level 4</option>
+                <option value="level5">Level 5</option>
+              </select>
+            </div>
+          </div>
+          <p class="subtitle">Edit bonus info, links, and questions for the selected level.</p>
+        </div>
+
+        <div id="gameDataEditor" class="hidden">
+          <!-- Level Configs Editor -->
+          <div class="card mb-20">
+            <h3>Level Info & Bonus</h3>
+            <div class="form-group">
+              <label>Hint (Magnifying Glass Link/Text)</label>
+              <textarea id="levelHint" rows="3" class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Bonus Info</label>
+              <textarea id="levelBonusInfo" rows="3" class="form-control"></textarea>
+            </div>
+            <button onclick="saveLevelConfig()" class="btn-primary mt-10">Save Level Info</button>
+          </div>
+
+          <!-- Questions Editor -->
+          <div class="card">
+            <h3>Questions Data</h3>
+            <div id="questionsContainer" class="questions-accordion">
+              <!-- Questions will be dynamically loaded here -->
+            </div>
+          </div>
+        </div>
+        
+        <div id="gameDataLoading" class="loader-container">
+            <div class="spinner"></div>
+            <p>Loading game data...</p>
+        </div>
+
+      </section>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="./js/dashboard.js"></script>
+    <script type="module" src="./js/gameData.js"></script>
+    <script>
+      let gameDataLoaded = false;
+      function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+
+        if (tabId === 'gamedata-tab' && !gameDataLoaded && window.loadGameData) {
+          window.loadGameData();
+          gameDataLoaded = true;
+        }
+      }
+      function logout() {
+        localStorage.removeItem('adminToken');
+        window.location.href = 'login.html';
+      }
+    </script>
   </body>
 </html>

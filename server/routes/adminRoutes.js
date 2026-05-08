@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Admin from "../models/admin.js";
+import { getGameData, updateGameData } from "../controllers/gameDataController.js";
 
 const router = express.Router();
 
@@ -21,5 +22,9 @@ router.post("/login", async (req, res) => {
 
   res.json({ token });
 });
+
+/* Game Data Management */
+router.get("/gamedata/:level", getGameData);
+router.put("/gamedata/:level", updateGameData);
 
 export default router;
