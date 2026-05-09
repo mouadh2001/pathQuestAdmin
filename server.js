@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import connectDB from "./server/config/db.js";
 import adminRoutes from "./server/routes/adminRoutes.js";
 import playerRoutes from "./server/routes/playerRoutes.js";
+import publicRoutes from "./server/routes/publicRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +35,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/admin", adminRoutes);
 app.use("/api/player", playerRoutes);
+app.use("/api/public", publicRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

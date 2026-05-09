@@ -27,6 +27,8 @@ export async function loadGameData() {
     // Set Level Info
     document.getElementById('levelHint').value = data.hint || '';
     document.getElementById('levelBonusInfo').value = data.bonusInfo || '';
+    document.getElementById('levelBonusInfoImgs').value = data.bonusInfoImgs ? data.bonusInfoImgs.join(', ') : '';
+    document.getElementById('levelBadgeUrl').value = data.badgeUrl || '';
     
     // Set Questions
     currentQuestions = data.questions || {};
@@ -68,12 +70,16 @@ function renderQuestions() {
     const qBody = document.createElement('div');
     qBody.className = 'question-body';
 
+    const qImagesStr = qData.imgs ? qData.imgs.join(', ') : '';
+
     // Question Text Input
     const qTextGroup = document.createElement('div');
     qTextGroup.className = 'form-group';
     qTextGroup.innerHTML = `
       <label>Question Text</label>
       <input type="text" class="form-control" value="${escapeHtml(qData.q)}" onchange="updateQuestionText('${qKey}', this.value)" />
+      <label class="mt-10">Question Images (Comma separated URLs/paths)</label>
+      <input type="text" class="form-control" value="${escapeHtml(qImagesStr)}" onchange="updateQuestionImages('${qKey}', this.value)" />
     `;
     qBody.appendChild(qTextGroup);
 
@@ -133,6 +139,9 @@ function toggleAccordion(headerElement) {
 
 // State Updaters
 window.updateQuestionText = (qKey, val) => { currentQuestions[qKey].q = val; };
+window.updateQuestionImages = (qKey, val) => {
+  currentQuestions[qKey].imgs = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+};
 window.updateOptionText = (qKey, aIndex, val) => { currentQuestions[qKey].a[aIndex] = val; };
 window.updateFeedbackText = (qKey, aIndex, val) => {
   if(!currentQuestions[qKey].feedbacks) currentQuestions[qKey].feedbacks = [];
@@ -158,6 +167,8 @@ export async function saveGameData() {
   const level = document.getElementById('levelSelect').value;
   const hint = document.getElementById('levelHint').value;
   const bonusInfo = document.getElementById('levelBonusInfo').value;
+  const bonusInfoImgs = document.getElementById('levelBonusInfoImgs').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  const badgeUrl = document.getElementById('levelBadgeUrl').value;
 
   try {
     const response = await fetch(`/api/admin/gamedata/${level}`, {
@@ -166,7 +177,7 @@ export async function saveGameData() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
       },
-      body: JSON.stringify({ hint, bonusInfo, questions: currentQuestions })
+      body: JSON.stringify({ hint, bonusInfo, bonusInfoImgs, badgeUrl, questions: currentQuestions })
     });
 
     if (!response.ok) {

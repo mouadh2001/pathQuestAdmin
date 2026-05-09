@@ -1,42 +1,83 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import GameData from '../models/gameData.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// The game data is in the Patho Quest final/src/data folder
+// Path to the original static game data
 const gameDataPath = path.resolve(__dirname, '../../../Patho Quest final/src/data');
+
+// Helper function to seed data from static files to MongoDB if not exists
+const seedGameDataIfNeeded = async (level) => {
+  try {
+    let existingData = await GameData.findOne({ levelId: level });
+    if (!existingData) {
+      console.log(`Seeding data for ${level} to MongoDB...`);
+      const levelConfigsPath = path.join(gameDataPath, 'levelConfigs.js');
+      const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
+
+      if (fs.existsSync(levelConfigsPath) && fs.existsSync(questionsPath)) {
+        const timestamp = Date.now();
+        const configModule = await import(`file://${levelConfigsPath}?update=${timestamp}`);
+        const questionsModule = await import(`file://${questionsPath}?update=${timestamp}`);
+
+        const levelConfigKey = level.trim();
+        const levelConfig = configModule.LEVELS[levelConfigKey] || configModule.LEVELS[levelConfigKey + '  '];
+        const questionsObjName = `${levelConfigKey}Questions`;
+        const questions = questionsModule[questionsObjName];
+
+        if (levelConfig) {
+          const newData = new GameData({
+            levelId: level,
+            title: levelConfig.title,
+            backgroundKey: levelConfig.backgroundKey,
+            isDeadlyFloor: levelConfig.isDeadlyFloor || false,
+            spawn: levelConfig.spawn,
+            questionCount: levelConfig.questionCount,
+            hint: levelConfig.hint,
+            bonusInfo: levelConfig.bonusInfo,
+            bonusInfoImgs: [],
+            badgeUrl: "",
+            platforms: levelConfig.platforms,
+            items: levelConfig.items,
+            enemies: levelConfig.enemies,
+            questions: questions
+          });
+          await newData.save();
+          return newData;
+        }
+      }
+    }
+    return existingData;
+  } catch (error) {
+    console.error(`Error seeding ${level}:`, error);
+    return null;
+  }
+};
 
 export const getGameData = async (req, res) => {
   const { level } = req.params;
   
   try {
-    const levelConfigsPath = path.join(gameDataPath, 'levelConfigs.js');
-    const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
-
-    if (!fs.existsSync(levelConfigsPath) || !fs.existsSync(questionsPath)) {
-      return res.status(404).json({ message: "Game data files not found for this level" });
+    let data = await GameData.findOne({ levelId: level });
+    
+    // If not found in DB, try to seed from static files
+    if (!data) {
+      data = await seedGameDataIfNeeded(level);
     }
 
-    // Bypass cache with timestamp
-    const timestamp = Date.now();
-    const configModule = await import(`file://${levelConfigsPath}?update=${timestamp}`);
-    const questionsModule = await import(`file://${questionsPath}?update=${timestamp}`);
-
-    // If level key is like 'level5  ', trim it just in case
-    const levelConfig = configModule.LEVELS[level] || configModule.LEVELS[level + '  '];
-    const questionsObjName = `${level}Questions`;
-    const questions = questionsModule[questionsObjName];
-
-    if (!levelConfig) {
-      return res.status(404).json({ message: "Level configuration not found in data" });
+    if (!data) {
+      return res.status(404).json({ message: "Game data not found for this level" });
     }
 
     res.json({
-      hint: levelConfig.hint,
-      bonusInfo: levelConfig.bonusInfo,
-      questions: questions
+      hint: data.hint,
+      bonusInfo: data.bonusInfo,
+      bonusInfoImgs: data.bonusInfoImgs,
+      badgeUrl: data.badgeUrl,
+      questions: data.questions
     });
 
   } catch (error) {
@@ -47,42 +88,73 @@ export const getGameData = async (req, res) => {
 
 export const updateGameData = async (req, res) => {
   const { level } = req.params;
-  const { hint, bonusInfo, questions } = req.body;
+  const { hint, bonusInfo, bonusInfoImgs, badgeUrl, questions } = req.body;
 
   try {
-    const levelConfigsPath = path.join(gameDataPath, 'levelConfigs.js');
-    const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
-
-    // 1. Update levelConfigs.js using Regex
-    let configsContent = fs.readFileSync(levelConfigsPath, 'utf8');
+    let data = await GameData.findOne({ levelId: level });
     
-    // Replace hint
-    const hintRegex = new RegExp(`(${level}:\\s*{[\\s\\S]*?hint:\\s*)(["'\`][\\s\\S]*?["'\`])(,)`);
-    if (hintRegex.test(configsContent)) {
-      configsContent = configsContent.replace(hintRegex, `$1${JSON.stringify(hint)}$3`);
-    } else {
-      console.warn("Could not find hint regex match for", level);
+    if (!data) {
+      data = await seedGameDataIfNeeded(level);
+      if (!data) {
+        return res.status(404).json({ message: "Game data not found for this level" });
+      }
     }
 
-    // Replace bonusInfo
-    const bonusRegex = new RegExp(`(${level}:\\s*{[\\s\\S]*?bonusInfo:\\s*)(["'\`][\\s\\S]*?["'\`])(,)`);
-    if (bonusRegex.test(configsContent)) {
-      configsContent = configsContent.replace(bonusRegex, `$1${JSON.stringify(bonusInfo)}$3`);
-    } else {
-      console.warn("Could not find bonusInfo regex match for", level);
-    }
+    data.hint = hint;
+    data.bonusInfo = bonusInfo;
+    data.bonusInfoImgs = bonusInfoImgs || [];
+    data.badgeUrl = badgeUrl || "";
+    data.questions = questions;
 
-    fs.writeFileSync(levelConfigsPath, configsContent, 'utf8');
-
-    // 2. Update levelXQuestions.js using JSON stringify
-    const questionsObjName = `${level}Questions`;
-    const questionsContent = `export const ${questionsObjName} = ${JSON.stringify(questions, null, 2)};\n`;
-    fs.writeFileSync(questionsPath, questionsContent, 'utf8');
+    await data.save();
 
     res.json({ message: "Game data updated successfully" });
 
   } catch (error) {
     console.error("Error updating game data:", error);
     res.status(500).json({ message: "Failed to update game data", error: error.message });
+  }
+};
+
+/* --- Public Route for Game Client --- */
+export const getPublicGameData = async (req, res) => {
+  try {
+    // If the DB is completely empty, we might want to seed all 5 levels 
+    // to avoid the game breaking on first load before admin touches it.
+    const count = await GameData.countDocuments();
+    if (count === 0) {
+      const levels = ['level1', 'level2', 'level3', 'level4', 'level5'];
+      for (let l of levels) {
+        await seedGameDataIfNeeded(l);
+      }
+    }
+
+    const allData = await GameData.find({});
+    
+    // Reconstruct the LEVELS object shape expected by the game
+    const LEVELS = {};
+    allData.forEach(levelData => {
+      LEVELS[levelData.levelId] = {
+        key: levelData.levelId,
+        title: levelData.title,
+        backgroundKey: levelData.backgroundKey,
+        isDeadlyFloor: levelData.isDeadlyFloor,
+        spawn: levelData.spawn,
+        questionCount: levelData.questionCount,
+        hint: levelData.hint,
+        bonusInfo: levelData.bonusInfo,
+        bonusInfoImgs: levelData.bonusInfoImgs,
+        badgeUrl: levelData.badgeUrl,
+        platforms: levelData.platforms,
+        items: levelData.items,
+        enemies: levelData.enemies,
+        questionData: levelData.questions // Map to plain object
+      };
+    });
+
+    res.json({ LEVELS });
+  } catch (error) {
+    console.error("Error fetching public game data:", error);
+    res.status(500).json({ message: "Failed to fetch public game data", error: error.message });
   }
 };
