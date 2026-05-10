@@ -110,13 +110,15 @@
               <textarea id="levelHint" rows="3" class="form-control"></textarea>
             </div>
             <div class="form-group">
-              <label>Bonus Info</label>
-              <textarea id="levelBonusInfo" rows="3" class="form-control"></textarea>
+              <label>Loupe Link (Tumor classification URL)</label>
+              <input type="text" id="levelLoupeLink" class="form-control" placeholder="https://..." />
             </div>
             <div class="form-group">
-              <label>Bonus Info Images (Comma separated URLs/paths)</label>
-              <input type="text" id="levelBonusInfoImgs" class="form-control" placeholder="../assets/items/bonus.png" />
+              <label>Bonus Info Pages</label>
+              <div id="bonusInfoContainer" class="bonus-info-container"></div>
+              <button type="button" onclick="addBonusInfoPage()" class="btn-secondary mt-10">+ Add Bonus Page</button>
             </div>
+
             <div class="form-group">
               <label>Level Completion Badge (Image URL/path)</label>
               <input type="text" id="levelBadgeUrl" class="form-control" placeholder="../assets/items/badge_level1.png" />

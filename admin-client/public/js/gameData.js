@@ -1,5 +1,6 @@
 // gameData.js
 let currentQuestions = {};
+let currentBonusInfo = [];
 
 export async function loadGameData() {
   const level = document.getElementById('levelSelect').value;
@@ -26,9 +27,11 @@ export async function loadGameData() {
     
     // Set Level Info
     document.getElementById('levelHint').value = data.hint || '';
-    document.getElementById('levelBonusInfo').value = data.bonusInfo || '';
-    document.getElementById('levelBonusInfoImgs').value = data.bonusInfoImgs ? data.bonusInfoImgs.join(', ') : '';
+    document.getElementById('levelLoupeLink').value = data.loupeLink || '';
     document.getElementById('levelBadgeUrl').value = data.badgeUrl || '';
+    
+    currentBonusInfo = data.bonusInfo || [];
+    renderBonusInfo();
     
     // Set Questions
     currentQuestions = data.questions || {};
@@ -163,11 +166,51 @@ window.toggleCorrectAnswer = (qKey, aIndex, isChecked) => {
   }
 };
 
+// Bonus Info Management
+window.addBonusInfoPage = () => {
+  currentBonusInfo.push({ text: '', image: '' });
+  renderBonusInfo();
+};
+window.updateBonusInfoText = (index, val) => { currentBonusInfo[index].text = val; };
+window.updateBonusInfoImage = (index, val) => { currentBonusInfo[index].image = val; };
+window.removeBonusInfoPage = (index) => {
+  currentBonusInfo.splice(index, 1);
+  renderBonusInfo();
+};
+
+function renderBonusInfo() {
+  const container = document.getElementById('bonusInfoContainer');
+  container.innerHTML = '';
+  if (currentBonusInfo.length === 0) {
+    container.innerHTML = '<p class="text-muted">No bonus pages added yet.</p>';
+    return;
+  }
+  currentBonusInfo.forEach((page, index) => {
+    const card = document.createElement('div');
+    card.className = 'card mt-10 p-10';
+    card.style.background = '#f8f9fa';
+    card.innerHTML = `
+      <div class="flex-between">
+        <strong>Page ${index + 1}</strong>
+        <button type="button" class="btn-danger btn-sm" onclick="removeBonusInfoPage(${index})">Remove</button>
+      </div>
+      <div class="form-group mt-10">
+        <label>Text</label>
+        <textarea class="form-control" rows="2" onchange="updateBonusInfoText(${index}, this.value)">${escapeHtml(page.text)}</textarea>
+      </div>
+      <div class="form-group mt-10">
+        <label>Image URL/path</label>
+        <input type="text" class="form-control" value="${escapeHtml(page.image)}" onchange="updateBonusInfoImage(${index}, this.value)" placeholder="../assets/bonusinfo/..." />
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
 export async function saveGameData() {
   const level = document.getElementById('levelSelect').value;
   const hint = document.getElementById('levelHint').value;
-  const bonusInfo = document.getElementById('levelBonusInfo').value;
-  const bonusInfoImgs = document.getElementById('levelBonusInfoImgs').value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  const loupeLink = document.getElementById('levelLoupeLink').value;
   const badgeUrl = document.getElementById('levelBadgeUrl').value;
 
   try {
@@ -177,7 +220,7 @@ export async function saveGameData() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
       },
-      body: JSON.stringify({ hint, bonusInfo, bonusInfoImgs, badgeUrl, questions: currentQuestions })
+      body: JSON.stringify({ hint, loupeLink, bonusInfo: currentBonusInfo, badgeUrl, questions: currentQuestions })
     });
 
     if (!response.ok) {

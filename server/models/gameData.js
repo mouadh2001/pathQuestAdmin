@@ -5,6 +5,11 @@ const questionFeedbackSchema = new mongoose.Schema({
   imgs: [{ type: String }],
 }, { _id: false });
 
+const bonusInfoSchema = new mongoose.Schema({
+  text: { type: String, default: "" },
+  image: { type: String, default: "" },
+}, { _id: false });
+
 const gameDataSchema = new mongoose.Schema({
   levelId: { type: String, required: true, unique: true },
   title: { type: String },
@@ -16,9 +21,9 @@ const gameDataSchema = new mongoose.Schema({
   },
   questionCount: { type: Number, default: 7 },
   hint: { type: String, default: "" },
-  bonusInfo: { type: String, default: "" },
-  bonusInfoImgs: [{ type: String }], // New array for bonus info images
-  badgeUrl: { type: String, default: "" }, // New field for badge image
+  loupeLink: { type: String, default: "" },
+  bonusInfo: [bonusInfoSchema],
+  badgeUrl: { type: String, default: "" },
 
   platforms: [mongoose.Schema.Types.Mixed],
   items: [mongoose.Schema.Types.Mixed],

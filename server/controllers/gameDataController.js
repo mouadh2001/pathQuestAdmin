@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import GameData from '../models/gameData.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +20,10 @@ const seedGameDataIfNeeded = async (level) => {
 
       if (fs.existsSync(levelConfigsPath) && fs.existsSync(questionsPath)) {
         const timestamp = Date.now();
-        const configModule = await import(`file://${levelConfigsPath}?update=${timestamp}`);
-        const questionsModule = await import(`file://${questionsPath}?update=${timestamp}`);
+        const configUrl = `${pathToFileURL(levelConfigsPath).href}?update=${timestamp}`;
+        const questionsUrl = `${pathToFileURL(questionsPath).href}?update=${timestamp}`;
+        const configModule = await import(configUrl);
+        const questionsModule = await import(questionsUrl);
 
         const levelConfigKey = level.trim();
         const levelConfig = configModule.LEVELS[levelConfigKey] || configModule.LEVELS[levelConfigKey + '  '];
@@ -37,9 +39,9 @@ const seedGameDataIfNeeded = async (level) => {
             spawn: levelConfig.spawn,
             questionCount: levelConfig.questionCount,
             hint: levelConfig.hint,
-            bonusInfo: levelConfig.bonusInfo,
-            bonusInfoImgs: [],
-            badgeUrl: "",
+            loupeLink: levelConfig.loupeLink || "",
+            bonusInfo: levelConfig.bonusInfo || [],
+            badgeUrl: levelConfig.badgeUrl || "",
             platforms: levelConfig.platforms,
             items: levelConfig.items,
             enemies: levelConfig.enemies,
@@ -74,8 +76,8 @@ export const getGameData = async (req, res) => {
 
     res.json({
       hint: data.hint,
+      loupeLink: data.loupeLink,
       bonusInfo: data.bonusInfo,
-      bonusInfoImgs: data.bonusInfoImgs,
       badgeUrl: data.badgeUrl,
       questions: data.questions
     });
@@ -88,7 +90,7 @@ export const getGameData = async (req, res) => {
 
 export const updateGameData = async (req, res) => {
   const { level } = req.params;
-  const { hint, bonusInfo, bonusInfoImgs, badgeUrl, questions } = req.body;
+  const { hint, loupeLink, bonusInfo, badgeUrl, questions } = req.body;
 
   try {
     let data = await GameData.findOne({ levelId: level });
@@ -101,9 +103,9 @@ export const updateGameData = async (req, res) => {
     }
 
     data.hint = hint;
-    data.bonusInfo = bonusInfo;
-    data.bonusInfoImgs = bonusInfoImgs || [];
-    data.badgeUrl = badgeUrl || "";
+    if (loupeLink !== undefined) data.loupeLink = loupeLink;
+    if (bonusInfo !== undefined) data.bonusInfo = bonusInfo;
+    if (badgeUrl !== undefined) data.badgeUrl = badgeUrl;
     data.questions = questions;
 
     await data.save();
@@ -142,8 +144,8 @@ export const getPublicGameData = async (req, res) => {
         spawn: levelData.spawn,
         questionCount: levelData.questionCount,
         hint: levelData.hint,
+        loupeLink: levelData.loupeLink,
         bonusInfo: levelData.bonusInfo,
-        bonusInfoImgs: levelData.bonusInfoImgs,
         badgeUrl: levelData.badgeUrl,
         platforms: levelData.platforms,
         items: levelData.items,
