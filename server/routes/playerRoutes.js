@@ -136,17 +136,17 @@ router.post("/register", async (req, res) => {
       password: hashedPassword,
     });
 
-    // Send welcome email
+    // Send welcome email asynchronously without blocking the response
     console.log("Sending welcome email to:", email);
-    const emailResult = await sendPlayerRegistrationConfirmation(
-      email,
-      username,
-    );
-    if (!emailResult.success) {
-      console.error("Email sending failed:", emailResult.error);
-    } else {
-      console.log("Welcome email sent successfully to:", email);
-    }
+    sendPlayerRegistrationConfirmation(email, username)
+      .then(emailResult => {
+        if (!emailResult.success) {
+          console.error("Email sending failed:", emailResult.error);
+        } else {
+          console.log("Welcome email sent successfully to:", email);
+        }
+      })
+      .catch(err => console.error("Unhandled error sending welcome email:", err));
 
     // Generate token
     const token = jwt.sign(
@@ -201,35 +201,31 @@ router.post("/create", authMiddleware, async (req, res) => {
       createdBy: req.admin.id,
     });
 
-    // Send email with credentials to the player
+    // Send email with credentials to the player asynchronously
     console.log("Sending player credentials email to:", email);
-    const playerEmailResult = await sendPlayerCredentialsEmail(email, password);
-    if (!playerEmailResult.success) {
-      console.error(
-        "Player credentials email sending failed:",
-        playerEmailResult.error,
-      );
-    } else {
-      console.log("Player credentials email sent successfully to:", email);
-    }
+    sendPlayerCredentialsEmail(email, password)
+      .then(playerEmailResult => {
+        if (!playerEmailResult.success) {
+          console.error("Player credentials email sending failed:", playerEmailResult.error);
+        } else {
+          console.log("Player credentials email sent successfully to:", email);
+        }
+      })
+      .catch(err => console.error(err));
 
-    // Send email notification to admin with credentials
+    // Send email notification to admin with credentials asynchronously
     const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL;
     if (adminEmail) {
       console.log("Sending admin notification email to:", adminEmail);
-      const emailResult = await sendAccountCreationEmail(
-        adminEmail,
-        email,
-        password,
-      );
-      if (!emailResult.success) {
-        console.error("Admin email sending failed:", emailResult.error);
-      } else {
-        console.log(
-          "Admin notification email sent successfully to:",
-          adminEmail,
-        );
-      }
+      sendAccountCreationEmail(adminEmail, email, password)
+        .then(emailResult => {
+          if (!emailResult.success) {
+            console.error("Admin email sending failed:", emailResult.error);
+          } else {
+            console.log("Admin notification email sent successfully to:", adminEmail);
+          }
+        })
+        .catch(err => console.error(err));
     } else {
       console.warn("No admin email found to send notification");
     }

@@ -19,12 +19,22 @@ function showNotification(message, type = "success", duration = 4000) {
 }
 
 async function createPlayer() {
-  const username = document.getElementById("username").value;
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const btn = document.querySelector('button[onclick="createPlayer()"]');
+  if (btn) btn.disabled = true;
+
+  const usernameInput = document.getElementById("username");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+
+  const username = usernameInput.value;
+  const email = emailInput.value;
+  const password = passwordInput.value;
 
   const token = getToken();
-  if (!token) return showNotification("Not authorized", "error");
+  if (!token) {
+    if (btn) btn.disabled = false;
+    return showNotification("Not authorized", "error");
+  }
 
   try {
     const res = await fetch(`${API_URL}/create`, {
@@ -40,6 +50,9 @@ async function createPlayer() {
 
     if (res.ok) {
       showNotification("Player created successfully", "success");
+      usernameInput.value = "";
+      emailInput.value = "";
+      passwordInput.value = "";
       loadPlayers();
     } else {
       showNotification(data.message || "Error creating player", "error");
@@ -47,6 +60,8 @@ async function createPlayer() {
   } catch (err) {
     console.error(err);
     showNotification("Server error", "error");
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
