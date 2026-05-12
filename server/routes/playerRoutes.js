@@ -267,13 +267,18 @@ const updatePlayerStats = async (req, res) => {
   try {
     const {
       levelKey,
-      score,
-      correct,
-      incorrect,
-      time,
-      questionStats = {},
-      metrics = {},
+      levelScore,
+      totalScore,
+      timeSpent,
+      progress,
+      attemptsPerQuestion = {},
+      incorrectAnswers,
+      correctAnswers,
+      firstTryCorrectAnswers,
+      character,
+      badges = {}
     } = req.body;
+    
     const player = await Player.findById(req.player.id);
 
     if (!player) {
@@ -282,43 +287,41 @@ const updatePlayerStats = async (req, res) => {
 
     const levelId = levelKey || "unknown_level";
 
-    // Check if the player already has stats for this level
     const existingLevelStats = player.levelStats.get(levelId);
     const existingScore = existingLevelStats ? existingLevelStats.score : -1;
-    const incomingScore = Number(score) || 0;
+    const incomingScore = Number(levelScore) || 0;
 
-    // Only update the level stats (which affect the total score) if the new score is better
-    // This allows the player to replay levels without hurting their total global score
     if (incomingScore > existingScore) {
       player.levelStats.set(levelId, {
         score: incomingScore,
-        correct: Number(correct) || 0,
-        incorrect: Number(incorrect) || 0,
-        time: Number(time) || 0,
-        metrics,
-        questionStats,
+        time: Number(timeSpent) || 0,
+        correct: Number(correctAnswers) || 0,
+        incorrect: Number(incorrectAnswers) || 0,
+        firstTryCorrectAnswers: Number(firstTryCorrectAnswers) || 0,
+        attemptsPerQuestion,
+        badges,
       });
     }
 
-    // Recalculate global stats to avoid unbounded accumulation
-    // Note: totalTime and totalSessions now incrementally grow based on the push event
-    // because replays shouldn't overwrite the global time spent playing.
-    let totalScore = 0;
+    player.character = character || player.character;
+    if (progress && Array.isArray(progress)) {
+      player.progress = progress;
+    }
+
+    let totalGlobalScore = 0;
     let totalCorrect = 0;
     let totalIncorrect = 0;
 
     for (const data of player.levelStats.values()) {
-      totalScore += data.score || 0;
+      totalGlobalScore += data.score || 0;
       totalCorrect += data.correct || 0;
       totalIncorrect += data.incorrect || 0;
     }
 
-    player.stats.score = totalScore;
+    player.stats.score = totalGlobalScore;
     player.stats.correct = totalCorrect;
     player.stats.incorrect = totalIncorrect;
-    player.stats.time =
-      (player.stats.time || 0) +
-      (Number(metrics.sessionDuration) || Number(time) || 0);
+    player.stats.time = (player.stats.time || 0) + (Number(timeSpent) || 0);
     player.stats.totalSessions = (player.stats.totalSessions || 0) + 1;
 
     await player.save();
@@ -327,12 +330,16 @@ const updatePlayerStats = async (req, res) => {
       player: player._id,
       username: player.username,
       levelKey: levelId,
-      score: Number(score) || 0,
-      correct: Number(correct) || 0,
-      incorrect: Number(incorrect) || 0,
-      time: Number(time) || 0,
-      metrics,
-      questionStats,
+      levelScore: incomingScore,
+      totalScore: Number(totalScore) || totalGlobalScore,
+      timeSpent: Number(timeSpent) || 0,
+      progress: player.progress,
+      attemptsPerQuestion,
+      incorrectAnswers: Number(incorrectAnswers) || 0,
+      correctAnswers: Number(correctAnswers) || 0,
+      firstTryCorrectAnswers: Number(firstTryCorrectAnswers) || 0,
+      character: player.character,
+      badges
     });
 
     res.json({
@@ -359,7 +366,7 @@ router.get("/stats/history", playerAuthMiddleware, async (req, res) => {
   try {
     const history = await PlayerStat.find({ player: req.player.id })
       .sort({ pushedAt: -1 })
-      .select("score correct incorrect time pushedAt")
+      .select("levelScore totalScore correctAnswers incorrectAnswers timeSpent pushedAt")
       .lean();
 
     res.json({ history });

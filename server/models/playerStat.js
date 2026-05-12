@@ -8,18 +8,16 @@ const playerStatSchema = new mongoose.Schema({
   },
   username: { type: String, required: true },
   levelKey: { type: String, default: "unknown_level" },
-  score: { type: Number, default: 0 },
-  correct: { type: Number, default: 0 },
-  incorrect: { type: Number, default: 0 },
-  time: { type: Number, default: 0 },
-  metrics: {
-    sessionDuration: { type: Number, default: 0 },
-    observationTime: { type: Number, default: 0 },
-    averageResponseTime: { type: Number, default: 0 },
-    firstTrySuccessCount: { type: Number, default: 0 },
-    levelAttempts: { type: Number, default: 1 }
-  },
-  questionStats: { type: mongoose.Schema.Types.Mixed, default: {} },
+  levelScore: { type: Number, default: 0 },
+  totalScore: { type: Number, default: 0 },
+  timeSpent: { type: Number, default: 0 },
+  progress: { type: [String], default: [] },
+  attemptsPerQuestion: { type: mongoose.Schema.Types.Mixed, default: {} },
+  incorrectAnswers: { type: Number, default: 0 },
+  correctAnswers: { type: Number, default: 0 },
+  firstTryCorrectAnswers: { type: Number, default: 0 },
+  character: { type: String, default: "man" },
+  badges: { type: mongoose.Schema.Types.Mixed, default: {} },
   pushedAt: { type: Date, default: Date.now },
 });
 

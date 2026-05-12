@@ -5,30 +5,25 @@ const playerSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
+  character: { type: String, default: "man" },
+  progress: { type: [String], default: [] },
   stats: {
     score: { type: Number, default: 0 },
-    level: { type: Number, default: 1 },
     correct: { type: Number, default: 0 },
     incorrect: { type: Number, default: 0 },
     time: { type: Number, default: 0 },
-    totalSessions: { type: Number, default: 0 },
-    questionStats: { type: mongoose.Schema.Types.Mixed, default: {} }
+    totalSessions: { type: Number, default: 0 }
   },
   levelStats: {
     type: Map,
     of: new mongoose.Schema({
       score: { type: Number, default: 0 },
+      time: { type: Number, default: 0 },
       correct: { type: Number, default: 0 },
       incorrect: { type: Number, default: 0 },
-      time: { type: Number, default: 0 },
-      metrics: {
-        sessionDuration: { type: Number, default: 0 },
-        observationTime: { type: Number, default: 0 },
-        averageResponseTime: { type: Number, default: 0 },
-        firstTrySuccessCount: { type: Number, default: 0 },
-        levelAttempts: { type: Number, default: 1 }
-      },
-      questionStats: { type: mongoose.Schema.Types.Mixed, default: {} }
+      firstTryCorrectAnswers: { type: Number, default: 0 },
+      attemptsPerQuestion: { type: mongoose.Schema.Types.Mixed, default: {} },
+      badges: { type: mongoose.Schema.Types.Mixed, default: {} }
     }, { _id: false }),
     default: {}
   },

@@ -164,9 +164,9 @@ async function renderPlayerDetails(player) {
   let globalFirstTryCount = 0;
   let globalQuestionsAnswered = 0;
 
-  let firstScore = historyData.length > 0 ? historyData[0].score : 0;
+  let firstScore = historyData.length > 0 ? historyData[0].levelScore : 0;
   let lastScore =
-    historyData.length > 0 ? historyData[historyData.length - 1].score : 0;
+    historyData.length > 0 ? historyData[historyData.length - 1].levelScore : 0;
   let tauxAmelioration =
     firstScore > 0
       ? (((lastScore - firstScore) / firstScore) * 100).toFixed(1)
@@ -196,8 +196,8 @@ async function renderPlayerDetails(player) {
   let correlationMsg = "Not calculable (too few data)";
   if (historyData.length > 2) {
     // array of x (time), y (score)
-    const X = historyData.map((h) => h.metrics?.observationTime || 0);
-    const Y = historyData.map((h) => h.score || 0);
+    const X = historyData.map((h) => h.timeSpent || 0);
+    const Y = historyData.map((h) => h.levelScore || 0);
     const sumX = X.reduce((a, b) => a + b, 0);
     const sumY = Y.reduce((a, b) => a + b, 0);
     const sumXY = X.reduce((a, b, i) => a + b * Y[i], 0);
@@ -222,18 +222,16 @@ async function renderPlayerDetails(player) {
     for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
       let questionStatsHtml = "";
       if (
-        levelData.questionStats &&
-        Object.keys(levelData.questionStats).length > 0
+        levelData.attemptsPerQuestion &&
+        Object.keys(levelData.attemptsPerQuestion).length > 0
       ) {
-        const rows = Object.entries(levelData.questionStats)
+        const rows = Object.entries(levelData.attemptsPerQuestion)
           .map(
-            ([qId, st]) => `
+            ([qId, attempts]) => `
             <tr>
               <td>${qId}</td>
-              <td style="color: green; font-weight: bold;">${st.correct || 0}</td>
-              <td style="color: red; font-weight: bold;">${st.wrong || 0}</td>
-              <td>${st.firstTrySuccess ? "✅ Yes" : "❌ No"}</td>
-              <td>${st.timeSpent ? st.timeSpent + "s" : "-"}</td>
+              <td style="color: ${attempts === 1 ? 'green' : 'black'}; font-weight: bold;">${attempts}</td>
+              <td>${attempts === 1 ? "✅ Yes" : "❌ No"}</td>
             </tr>
           `,
           )
@@ -245,10 +243,8 @@ async function renderPlayerDetails(player) {
               <thead>
                 <tr>
                   <th>Question ID</th>
-                  <th>Correct</th>
-                  <th>Incorrect</th>
+                  <th>Total Attempts</th>
                   <th>First Try Success?</th>
-                  <th>Time Spent (s)</th>
                 </tr>
               </thead>
               <tbody>
@@ -259,9 +255,8 @@ async function renderPlayerDetails(player) {
         `;
       }
 
-      const metrics = levelData.metrics || {};
-      const totalQuestions = metrics.totalQuestionsAnswered || 0;
-      const firstTryCount = metrics.firstTrySuccessCount || 0;
+      const totalQuestions = (levelData.correct || 0) + (levelData.incorrect || 0);
+      const firstTryCount = levelData.firstTryCorrectAnswers || 0;
       globalFirstTryCount += firstTryCount;
       globalQuestionsAnswered += totalQuestions;
 
@@ -284,20 +279,11 @@ async function renderPlayerDetails(player) {
                   <li>Successful questions (1st try) / Total: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
                 </ul>
               </div>
-              
-              <div style="background: #eff6ff; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #1e3a8a;">Learning Curve</h4>
-                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                  <li>Number of attempts (Deaths/Restarts): <strong>${metrics.levelAttempts || 1}</strong></li>
-                </ul>
-              </div>
 
               <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
                 <h4 style="margin: 0 0 5px 0; color: #14532d;">Time & Engagement</h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                  <li>Observation Time: <strong>${metrics.observationTime || 0}s</strong></li>
-                  <li>Avg. Response Time: <strong>${metrics.averageResponseTime || 0}s</strong></li>
-                  <li>Time per level (Session): <strong>${metrics.sessionDuration || levelData.time || 0}s</strong></li>
+                  <li>Time per level (Session): <strong>${levelData.time || 0}s</strong></li>
                 </ul>
               </div>
             </div>
@@ -372,16 +358,14 @@ async function renderPlayerDetails(player) {
   // Draw Charts
   if (historyData.length > 0) {
     const labelsTries = historyData.map((_, i) => `T\${i + 1}`);
-    const scoreData = historyData.map((h) => h.score);
-    const timeData = historyData.map(
-      (h) => h.metrics?.averageResponseTime || 0,
-    );
+    const scoreData = historyData.map((h) => h.levelScore || 0);
+    const timeData = historyData.map((h) => h.timeSpent || 0);
     const labelsDates = historyData.map((h) =>
       new Date(h.pushedAt).toLocaleDateString(),
     );
     const successRateData = historyData.map((h) => {
-      const qAnswered = (h.correct || 0) + (h.incorrect || 0);
-      const firstTry = h.metrics?.firstTrySuccessCount || 0;
+      const qAnswered = (h.correctAnswers || 0) + (h.incorrectAnswers || 0);
+      const firstTry = h.firstTryCorrectAnswers || 0;
       return qAnswered > 0 ? ((firstTry / qAnswered) * 100).toFixed(1) : 0;
     });
 
@@ -517,35 +501,31 @@ async function exportPlayerToExcel(player, historyData) {
   ws2.columns = [
     { header: "Date/Time", key: "date", width: 22 },
     { header: "Level", key: "level", width: 15 },
-    { header: "Score", key: "score", width: 10 },
+    { header: "Level Score", key: "score", width: 15 },
+    { header: "Total Score", key: "totalScore", width: 15 },
     { header: "Success (1st try)", key: "successCount", width: 18 },
     { header: "Success Rate", key: "successRate", width: 15 },
-    { header: "Total Time (s)", key: "time", width: 15 },
-    { header: "Obs. Time (s)", key: "obsTime", width: 15 },
-    { header: "Avg. Resp. Time (s)", key: "avgRespTime", width: 20 },
-    { header: "Attempts", key: "attempts", width: 12 },
+    { header: "Time Spent (s)", key: "time", width: 15 },
   ];
 
   styleHeaderRow(ws2.getRow(1));
 
   historyData.forEach((h) => {
-    const metrics = h.metrics || {};
-    const totalQ = (h.correct || 0) + (h.incorrect || 0);
+    const totalQ = (h.correctAnswers || 0) + (h.incorrectAnswers || 0);
+    const firstTry = h.firstTryCorrectAnswers || 0;
     const successRate =
       totalQ > 0
-        ? ((metrics.firstTrySuccessCount / totalQ) * 100).toFixed(1) + "%"
+        ? ((firstTry / totalQ) * 100).toFixed(1) + "%"
         : "0%";
 
     ws2.addRow({
       date: new Date(h.pushedAt).toLocaleString(),
       level: h.levelKey ? h.levelKey.toUpperCase() : "N/A",
-      score: h.score || 0,
-      successCount: `${metrics.firstTrySuccessCount || 0}/${totalQ}`,
+      score: h.levelScore || 0,
+      totalScore: h.totalScore || 0,
+      successCount: `${firstTry}/${totalQ}`,
       successRate: successRate,
-      time: h.time || 0,
-      obsTime: metrics.observationTime || 0,
-      avgRespTime: metrics.averageResponseTime || 0,
-      attempts: metrics.levelAttempts || 1,
+      time: h.timeSpent || 0,
     });
   });
 
@@ -589,11 +569,10 @@ function renderGlobalStats(players) {
         }
         levelAggregates[levelKey].playersCount += 1;
         levelAggregates[levelKey].totalScore += lStats.score || 0;
-        levelAggregates[levelKey].totalTime +=
-          lStats.time || lStats.metrics?.sessionDuration || 0;
+        levelAggregates[levelKey].totalTime += lStats.time || 0;
 
-        if (lStats.questionStats) {
-          for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
+        if (lStats.attemptsPerQuestion) {
+          for (const [qId, attempts] of Object.entries(lStats.attemptsPerQuestion)) {
             if (!levelAggregates[levelKey].questions[qId]) {
               levelAggregates[levelKey].questions[qId] = {
                 attemptedBy: 0,
@@ -602,10 +581,10 @@ function renderGlobalStats(players) {
               };
             }
             levelAggregates[levelKey].questions[qId].attemptedBy += 1;
-            if (qStat.correct > 0) {
+            if (attempts > 0) {
               levelAggregates[levelKey].questions[qId].correctAnswers += 1;
             }
-            if (qStat.firstTrySuccess) {
+            if (attempts === 1) {
               levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
             }
           }
