@@ -221,6 +221,8 @@ async function renderPlayerDetails(player) {
   if (player.levelStats && Object.keys(player.levelStats).length > 0) {
     for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
       let questionStatsHtml = "";
+      
+      // Handle both new schema (attemptsPerQuestion) and old schema (questionStats)
       if (
         levelData.attemptsPerQuestion &&
         Object.keys(levelData.attemptsPerQuestion).length > 0
@@ -232,6 +234,39 @@ async function renderPlayerDetails(player) {
               <td>${qId}</td>
               <td style="color: ${attempts === 1 ? 'green' : 'black'}; font-weight: bold;">${attempts}</td>
               <td>${attempts === 1 ? "✅ Yes" : "❌ No"}</td>
+            </tr>
+          `,
+          )
+          .join("");
+
+        questionStatsHtml = `
+          <div style="overflow-x: auto;">
+            <table class="question-stats">
+              <thead>
+                <tr>
+                  <th>Question ID</th>
+                  <th>Total Attempts</th>
+                  <th>First Try Success?</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else if (
+        levelData.questionStats &&
+        Object.keys(levelData.questionStats).length > 0
+      ) {
+        // Fallback for older accounts
+        const rows = Object.entries(levelData.questionStats)
+          .map(
+            ([qId, st]) => `
+            <tr>
+              <td>${qId}</td>
+              <td style="color: black; font-weight: bold;">${(st.correct || 0) + (st.wrong || 0)} (Old format)</td>
+              <td>${st.firstTrySuccess ? "✅ Yes" : "❌ No"}</td>
             </tr>
           `,
           )
@@ -585,6 +620,24 @@ function renderGlobalStats(players) {
               levelAggregates[levelKey].questions[qId].correctAnswers += 1;
             }
             if (attempts === 1) {
+              levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
+            }
+          }
+        } else if (lStats.questionStats) {
+          // Backward compatibility for old accounts
+          for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
+            if (!levelAggregates[levelKey].questions[qId]) {
+              levelAggregates[levelKey].questions[qId] = {
+                attemptedBy: 0,
+                correctAnswers: 0,
+                firstTrySuccesses: 0,
+              };
+            }
+            levelAggregates[levelKey].questions[qId].attemptedBy += 1;
+            if (qStat.correct > 0) {
+              levelAggregates[levelKey].questions[qId].correctAnswers += 1;
+            }
+            if (qStat.firstTrySuccess) {
               levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
             }
           }
