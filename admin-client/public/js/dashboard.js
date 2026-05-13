@@ -267,7 +267,7 @@ async function renderPlayerDetails(player) {
           <div class="level-content">
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
               <div style="background: #fdf2f8; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Level Summary</h4>
+                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Last Attempt</h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
                   <li>Score: <strong>${levelData.score || 0}</strong></li>
                   <li>First-try correct answers: <strong>${firstTryCount}</strong></li>
