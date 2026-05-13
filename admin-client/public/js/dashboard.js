@@ -221,6 +221,7 @@ async function renderPlayerDetails(player) {
           ? Math.round((firstTryCount / totalQuestions) * 100)
           : 0;
 
+      const timesPlayed = levelChartData[levelKey]?.length || 0;
       const levelChartHTML = levelChartData[levelKey]
         ? `
             <div style="margin-top: 15px;">
@@ -247,7 +248,7 @@ async function renderPlayerDetails(player) {
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
                   <li>Score: <strong>${levelData.score || 0}</strong></li>
                   <li>First-try correct answers: <strong>${firstTryCount}</strong></li>
-                  <li>Total questions answered: <strong>${totalQuestions}</strong></li>
+                  <li>Times played: <strong>${timesPlayed}</strong></li>
                   <li>First-try rate: <strong>${successRate}%</strong></li>
                   <li>Time spent: <strong>${levelData.time || 0}s</strong></li>
                 </ul>
