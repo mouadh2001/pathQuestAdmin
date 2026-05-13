@@ -221,6 +221,22 @@ async function renderPlayerDetails(player) {
           ? Math.round((firstTryCount / totalQuestions) * 100)
           : 0;
 
+      const levelChartHTML = levelChartData[levelKey]
+        ? `
+            <div style="margin-top: 15px;">
+              <h4 style="margin: 0 0 10px 0; color: #6b7280;">Performance Charts</h4>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="background:#f8fafc; padding:10px; border-radius:8px;">
+                  <canvas id="levelScoreChart-${levelKey}"></canvas>
+                </div>
+                <div style="background:#f8fafc; padding:10px; border-radius:8px;">
+                  <canvas id="levelTimeChart-${levelKey}"></canvas>
+                </div>
+              </div>
+            </div>
+          `
+        : '';
+
       levelStatsHtml += `
         <details class="level-details">
           <summary>Level: ${levelKey.toUpperCase()} <span style="font-size: 13px; color: #6b7280; font-weight: normal; margin-left: 10px;">(Score: ${levelData.score || 0})</span></summary>
@@ -237,6 +253,7 @@ async function renderPlayerDetails(player) {
                 </ul>
               </div>
             </div>
+            ${levelChartHTML}
           </div>
         </details>
       `;
@@ -255,71 +272,15 @@ async function renderPlayerDetails(player) {
       ? Math.round((globalFirstTryCount / globalQuestionsAnswered) * 100)
       : 0;
 
-  const firstTryPerLevelRows = Object.entries(player.levelStats)
-    .filter(([, levelData]) => levelData.attemptsPerQuestion !== undefined)
-    .map(([levelKey, levelData]) => {
-      const firstTryCount = levelData.firstTryCorrectAnswers || 0;
-      const totalQuestions = (levelData.correct || 0) + (levelData.incorrect || 0);
-      return `
-        <tr>
-          <td>${levelKey.toUpperCase()}</td>
-          <td style="text-align:center; font-weight:bold;">${firstTryCount}</td>
-          <td style="text-align:center;">${totalQuestions}</td>
-        </tr>
-      `;
-    })
-    .join("");
-
-  const firstTryPerLevelHtml = firstTryPerLevelRows
-    ? `
-      <table class="question-stats" style="width: 100%;">
-        <thead>
-          <tr>
-            <th>Level</th>
-            <th>Correct 1st Try</th>
-            <th>Total Questions</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${firstTryPerLevelRows}
-        </tbody>
-      </table>
-    `
-    : "<p style='margin: 0; color: #6b7280;'>No new-format level stats available.</p>";
-
-  const perLevelChartsHtml = Object.keys(levelChartData)
-    .map((levelKey) => {
-      return `
-        <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
-          <h4 style="margin: 0 0 10px 0;">${levelKey.toUpperCase()}</h4>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div style="background:#f8fafc; padding:10px; border-radius:8px;">
-              <canvas id="levelScoreChart-${levelKey}"></canvas>
-            </div>
-            <div style="background:#f8fafc; padding:10px; border-radius:8px;">
-              <canvas id="levelTimeChart-${levelKey}"></canvas>
-            </div>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
   content.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 280px; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
-        <h3 style="margin-top: 0;">Player Overview</h3>
-        <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #111827;">
-          <dt style="font-weight: 700;">Username</dt><dd style="margin: 0;">${player.username}</dd>
-          <dt style="font-weight: 700;">Email</dt><dd style="margin: 0;">${player.email}</dd>
-          <dt style="font-weight: 700;">Global success rate (1st try)</dt><dd style="margin: 0; color: #16a34a; font-weight: 700;">${globalSuccessRate}%</dd>
-          <dt style="font-weight: 700;">Total playtime</dt><dd style="margin: 0;">${player.stats?.time ?? 0}s</dd>
-        </dl>
-      </div>
-      <div style="flex: 1; min-width: 320px; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
-        <h3 style="margin-top: 0;">Correct 1st Try per Level</h3>
-        ${firstTryPerLevelHtml}
-      </div>
+    <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+      <h3 style="margin-top: 0;">Player Overview</h3>
+      <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #111827;">
+        <dt style="font-weight: 700;">Username</dt><dd style="margin: 0;">${player.username}</dd>
+        <dt style="font-weight: 700;">Email</dt><dd style="margin: 0;">${player.email}</dd>
+        <dt style="font-weight: 700;">Global success rate (1st try)</dt><dd style="margin: 0; color: #16a34a; font-weight: 700;">${globalSuccessRate}%</dd>
+        <dt style="font-weight: 700;">Total playtime</dt><dd style="margin: 0;">${player.stats?.time ?? 0}s</dd>
+      </dl>
     </div>
 
     <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
@@ -328,8 +289,8 @@ async function renderPlayerDetails(player) {
     </div>
 
     <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
-      <h3 style="margin-top: 0;">Per-Level Charts</h3>
-      ${perLevelChartsHtml}
+      <h3 style="margin-top: 0;">Level Details</h3>
+      ${levelStatsHtml}
     </div>
   `;
 
