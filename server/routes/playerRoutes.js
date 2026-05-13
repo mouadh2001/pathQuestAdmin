@@ -291,17 +291,15 @@ const updatePlayerStats = async (req, res) => {
     const existingScore = existingLevelStats ? existingLevelStats.score : -1;
     const incomingScore = Number(levelScore) || 0;
 
-    if (incomingScore > existingScore) {
-      player.levelStats.set(levelId, {
-        score: incomingScore,
-        time: Number(timeSpent) || 0,
-        correct: Number(correctAnswers) || 0,
-        incorrect: Number(incorrectAnswers) || 0,
-        firstTryCorrectAnswers: Number(firstTryCorrectAnswers) || 0,
-        attemptsPerQuestion,
-        badges,
-      });
-    }
+    player.levelStats.set(levelId, {
+      score: Math.max(existingScore, incomingScore),
+      time: Number(timeSpent) || (existingLevelStats?.time || 0),
+      correct: Number(correctAnswers) || (existingLevelStats?.correct || 0),
+      incorrect: Number(incorrectAnswers) || (existingLevelStats?.incorrect || 0),
+      firstTryCorrectAnswers: Number(firstTryCorrectAnswers) || (existingLevelStats?.firstTryCorrectAnswers || 0),
+      attemptsPerQuestion,
+      badges,
+    });
 
     player.character = character || player.character;
     if (progress && Array.isArray(progress)) {

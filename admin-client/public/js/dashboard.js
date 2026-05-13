@@ -88,6 +88,16 @@ async function loadPlayers() {
   }
 }
 
+function isPlayerUsingNewStats(player) {
+  if (!player || !player.levelStats || Object.keys(player.levelStats).length === 0) {
+    return false;
+  }
+
+  return Object.values(player.levelStats).every((levelData) =>
+    levelData && levelData.attemptsPerQuestion !== undefined,
+  );
+}
+
 async function renderPlayers() {
   const tbody = document.getElementById("playersTable");
   tbody.innerHTML = "";
@@ -145,6 +155,19 @@ async function renderPlayerDetails(player) {
   }
 
   details.classList.remove("hidden");
+
+  if (!isPlayerUsingNewStats(player)) {
+    content.innerHTML = `
+      <div style="padding: 20px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #b45309;">Legacy stats format detected</h3>
+        <p style="margin: 0; color: #92400e;">
+          This player's stored level stats are in an older format and are not displayed here.
+          Only accounts using the new stats format are rendered in the dashboard.
+        </p>
+      </div>
+    `;
+    return;
+  }
 
   // Fetch History for advanced charts and metrics
   let historyData = [];
@@ -219,12 +242,16 @@ async function renderPlayerDetails(player) {
 
   let levelStatsHtml = "";
   if (player.levelStats && Object.keys(player.levelStats).length > 0) {
+    let newFormatLevelsFound = false;
     for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
+      if (levelData.attemptsPerQuestion === undefined) {
+        continue; // ignore old-format level stats
+      }
+
+      newFormatLevelsFound = true;
       let questionStatsHtml = "";
       
-      // Handle both new schema (attemptsPerQuestion) and old schema (questionStats)
       if (
-        levelData.attemptsPerQuestion &&
         Object.keys(levelData.attemptsPerQuestion).length > 0
       ) {
         const rows = Object.entries(levelData.attemptsPerQuestion)
@@ -234,39 +261,6 @@ async function renderPlayerDetails(player) {
               <td>${qId}</td>
               <td style="color: ${attempts === 1 ? 'green' : 'black'}; font-weight: bold;">${attempts}</td>
               <td>${attempts === 1 ? "✅ Yes" : "❌ No"}</td>
-            </tr>
-          `,
-          )
-          .join("");
-
-        questionStatsHtml = `
-          <div style="overflow-x: auto;">
-            <table class="question-stats">
-              <thead>
-                <tr>
-                  <th>Question ID</th>
-                  <th>Total Attempts</th>
-                  <th>First Try Success?</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows}
-              </tbody>
-            </table>
-          </div>
-        `;
-      } else if (
-        levelData.questionStats &&
-        Object.keys(levelData.questionStats).length > 0
-      ) {
-        // Fallback for older accounts
-        const rows = Object.entries(levelData.questionStats)
-          .map(
-            ([qId, st]) => `
-            <tr>
-              <td>${qId}</td>
-              <td style="color: black; font-weight: bold;">${(st.correct || 0) + (st.wrong || 0)} (Old format)</td>
-              <td>${st.firstTrySuccess ? "✅ Yes" : "❌ No"}</td>
             </tr>
           `,
           )
@@ -328,6 +322,10 @@ async function renderPlayerDetails(player) {
           </div>
         </details>
       `;
+    }
+    if (!newFormatLevelsFound) {
+      levelStatsHtml =
+        "<p style='margin-top: 15px; color: #6b7280;'>No new-format level stats recorded for this player.</p>";
     }
   } else {
     levelStatsHtml =
@@ -591,7 +589,20 @@ function renderGlobalStats(players) {
   // Accumulateur pour les insights par niveau
   const levelAggregates = {};
 
-  players.forEach((p) => {
+  const newPlayers = players.filter(isPlayerUsingNewStats);
+  if (newPlayers.length === 0) {
+    content.innerHTML = `
+      <div style="padding: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #1e40af;">No new-format player stats available</h3>
+        <p style="margin: 0; color: #1e3a8a;">
+          The dashboard is currently ignoring legacy-format accounts and will render global statistics only when new-format player stats exist.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  newPlayers.forEach((p) => {
     if (p.levelStats) {
       for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
         if (!levelAggregates[levelKey]) {
@@ -620,24 +631,6 @@ function renderGlobalStats(players) {
               levelAggregates[levelKey].questions[qId].correctAnswers += 1;
             }
             if (attempts === 1) {
-              levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
-            }
-          }
-        } else if (lStats.questionStats) {
-          // Backward compatibility for old accounts
-          for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
-            if (!levelAggregates[levelKey].questions[qId]) {
-              levelAggregates[levelKey].questions[qId] = {
-                attemptedBy: 0,
-                correctAnswers: 0,
-                firstTrySuccesses: 0,
-              };
-            }
-            levelAggregates[levelKey].questions[qId].attemptedBy += 1;
-            if (qStat.correct > 0) {
-              levelAggregates[levelKey].questions[qId].correctAnswers += 1;
-            }
-            if (qStat.firstTrySuccess) {
               levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
             }
           }
@@ -1047,7 +1040,7 @@ async function exportGlobalExcel() {
 
   const levelAggs = {};
 
-  playersCache.forEach((p) => {
+  playersCache.filter(isPlayerUsingNewStats).forEach((p) => {
     if (p.levelStats) {
       for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
         if (!levelAggs[levelKey]) {
@@ -1062,8 +1055,8 @@ async function exportGlobalExcel() {
         levelAggs[levelKey].totalScore += lStats.score || 0;
         levelAggs[levelKey].totalTime +=
           lStats.time || lStats.metrics?.sessionDuration || 0;
-        if (lStats.questionStats) {
-          for (const [qId, qStat] of Object.entries(lStats.questionStats)) {
+        if (lStats.attemptsPerQuestion) {
+          for (const [qId, attempts] of Object.entries(lStats.attemptsPerQuestion)) {
             if (!levelAggs[levelKey].questions[qId]) {
               levelAggs[levelKey].questions[qId] = {
                 attemptedBy: 0,
@@ -1072,10 +1065,10 @@ async function exportGlobalExcel() {
               };
             }
             levelAggs[levelKey].questions[qId].attemptedBy += 1;
-            if (qStat.correct > 0) {
+            if (attempts > 0) {
               levelAggs[levelKey].questions[qId].correctAnswers += 1;
             }
-            if (qStat.firstTrySuccess) {
+            if (attempts === 1) {
               levelAggs[levelKey].questions[qId].firstTrySuccesses += 1;
             }
           }
