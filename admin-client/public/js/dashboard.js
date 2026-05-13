@@ -222,6 +222,29 @@ async function renderPlayerDetails(player) {
           : 0;
 
       const timesPlayed = levelChartData[levelKey]?.length || 0;
+      
+      // Calculate best performance for this level
+      const levelHistoryEntries = newFormatHistoryData.filter(h => h.levelKey === levelKey);
+      let bestPerformance = null;
+      if (levelHistoryEntries.length > 0) {
+        bestPerformance = levelHistoryEntries.reduce((best, current) => {
+          return (current.levelScore || 0) > (best.levelScore || 0) ? current : best;
+        });
+      }
+      
+      const bestPerformanceHTML = bestPerformance ? `
+        <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
+          <h4 style="margin: 0 0 5px 0; color: #15803d;">Best Performance</h4>
+          <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
+            <li>Score: <strong>${bestPerformance.levelScore || 0}</strong></li>
+            <li>First-try correct answers: <strong>${bestPerformance.firstTryCorrectAnswers || 0}</strong></li>
+            <li>Times played: <strong>${timesPlayed}</strong></li>
+            <li>First-try rate: <strong>${bestPerformance.correctAnswers + bestPerformance.incorrectAnswers > 0 ? Math.round((bestPerformance.firstTryCorrectAnswers / (bestPerformance.correctAnswers + bestPerformance.incorrectAnswers)) * 100) : 0}%</strong></li>
+            <li>Time spent: <strong>${bestPerformance.timeSpent || 0}s</strong></li>
+          </ul>
+        </div>
+      ` : '';
+      
       const levelChartHTML = levelChartData[levelKey]
         ? `
             <div style="margin-top: 15px;">
@@ -253,6 +276,7 @@ async function renderPlayerDetails(player) {
                   <li>Time spent: <strong>${levelData.time || 0}s</strong></li>
                 </ul>
               </div>
+              ${bestPerformanceHTML}
             </div>
             ${levelChartHTML}
           </div>
