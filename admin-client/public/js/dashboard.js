@@ -284,11 +284,6 @@ async function renderPlayerDetails(player) {
       </dl>
     </div>
 
-    <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
-      <h3 style="margin-top: 0;">Overview Chart</h3>
-      <canvas id="overviewChart"></canvas>
-    </div>
-
     <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
       <h3 style="margin-top: 0;">Level Details</h3>
       ${levelStatsHtml}
@@ -305,44 +300,6 @@ async function renderPlayerDetails(player) {
 
   // Draw Charts
   if (newFormatHistoryData.length > 0) {
-    const overviewLabels = newFormatHistoryData.map((h) =>
-      new Date(h.pushedAt).toLocaleDateString(),
-    );
-    const overviewFirstTryData = newFormatHistoryData.map((h) => {
-      const totalQ = (h.correctAnswers || 0) + (h.incorrectAnswers || 0);
-      return totalQ > 0 ? ((h.firstTryCorrectAnswers || 0) / totalQ) * 100 : 0;
-    });
-
-    const overviewCanvas = document.getElementById("overviewChart");
-    if (overviewCanvas) {
-      new Chart(overviewCanvas, {
-        type: "line",
-        data: {
-          labels: overviewLabels,
-          datasets: [
-            {
-              label: "1st Try Success Rate (%)",
-              data: overviewFirstTryData,
-              borderColor: "#10b981",
-              backgroundColor: "rgba(16, 185, 129, 0.2)",
-              fill: true,
-              tension: 0.2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 100,
-              title: { display: true, text: "Success Rate (%)" },
-            },
-          },
-        },
-      });
-    }
-
     Object.entries(levelChartData).forEach(([levelKey, entries]) => {
       const sortedEntries = entries.sort(
         (a, b) => new Date(a.pushedAt) - new Date(b.pushedAt),
