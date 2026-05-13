@@ -186,61 +186,23 @@ async function renderPlayerDetails(player) {
 
   let globalFirstTryCount = 0;
   let globalQuestionsAnswered = 0;
-
-  let firstScore = historyData.length > 0 ? historyData[0].levelScore : 0;
-  let lastScore =
-    historyData.length > 0 ? historyData[historyData.length - 1].levelScore : 0;
-  let tauxAmelioration =
-    firstScore > 0
-      ? (((lastScore - firstScore) / firstScore) * 100).toFixed(1)
-      : 0;
-  let vitesseApprentissage =
-    historyData.length > 1
-      ? ((lastScore - firstScore) / (historyData.length - 1)).toFixed(1)
-      : 0;
-
-  // Fréquence
-  let freqSessions = "Not calculable";
-  if (historyData.length > 1) {
-    const firstDate = new Date(historyData[0].pushedAt);
-    const lastDate = new Date(historyData[historyData.length - 1].pushedAt);
-    const diffWeeks = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 7);
-    if (diffWeeks > 0.01) {
-      freqSessions =
-        (historyData.length / diffWeeks).toFixed(1) + " sessions/week";
-    } else {
-      freqSessions = historyData.length + " sessions (under 1 week)";
-    }
-  } else if (historyData.length === 1) {
-    freqSessions = "1 unique session";
-  }
-
-  // Correlation calculation (Pearson loosely) on history (Time spent vs Score)
-  let correlationMsg = "Not calculable (too few data)";
-  if (historyData.length > 2) {
-    // array of x (time), y (score)
-    const X = historyData.map((h) => h.timeSpent || 0);
-    const Y = historyData.map((h) => h.levelScore || 0);
-    const sumX = X.reduce((a, b) => a + b, 0);
-    const sumY = Y.reduce((a, b) => a + b, 0);
-    const sumXY = X.reduce((a, b, i) => a + b * Y[i], 0);
-    const sumX2 = X.reduce((a, b) => a + b * b, 0);
-    const sumY2 = Y.reduce((a, b) => a + b * b, 0);
-    const n = historyData.length;
-    const numerator = n * sumXY - sumX * sumY;
-    const denominator = Math.sqrt(
-      (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY),
-    );
-    if (denominator !== 0) {
-      const r = numerator / denominator;
-      if (r > 0.5) correlationMsg = `Strong (r=${r.toFixed(2)})`;
-      else if (r > 0.1) correlationMsg = `Weak Positive (r=${r.toFixed(2)})`;
-      else if (r > -0.1) correlationMsg = `Zero (r=${r.toFixed(2)})`;
-      else correlationMsg = `Negative (r=${r.toFixed(2)})`;
-    }
-  }
-
   let levelStatsHtml = "";
+
+  const newFormatHistoryData = historyData.filter(
+    (h) => h.attemptsPerQuestion !== undefined,
+  );
+
+  const levelChartData = {};
+  newFormatHistoryData.forEach((h) => {
+    if (!levelChartData[h.levelKey]) {
+      levelChartData[h.levelKey] = [];
+    }
+    levelChartData[h.levelKey].push({
+      pushedAt: h.pushedAt,
+      score: h.levelScore || 0,
+      time: h.timeSpent || 0,
+    });
+  });
   if (player.levelStats && Object.keys(player.levelStats).length > 0) {
     let newFormatLevelsFound = false;
     for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
@@ -249,41 +211,6 @@ async function renderPlayerDetails(player) {
       }
 
       newFormatLevelsFound = true;
-      let questionStatsHtml = "";
-      
-      if (
-        Object.keys(levelData.attemptsPerQuestion).length > 0
-      ) {
-        const rows = Object.entries(levelData.attemptsPerQuestion)
-          .map(
-            ([qId, attempts]) => `
-            <tr>
-              <td>${qId}</td>
-              <td style="color: ${attempts === 1 ? 'green' : 'black'}; font-weight: bold;">${attempts}</td>
-              <td>${attempts === 1 ? "✅ Yes" : "❌ No"}</td>
-            </tr>
-          `,
-          )
-          .join("");
-
-        questionStatsHtml = `
-          <div style="overflow-x: auto;">
-            <table class="question-stats">
-              <thead>
-                <tr>
-                  <th>Question ID</th>
-                  <th>Total Attempts</th>
-                  <th>First Try Success?</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }
-
       const totalQuestions = (levelData.correct || 0) + (levelData.incorrect || 0);
       const firstTryCount = levelData.firstTryCorrectAnswers || 0;
       globalFirstTryCount += firstTryCount;
@@ -297,28 +224,19 @@ async function renderPlayerDetails(player) {
       levelStatsHtml += `
         <details class="level-details">
           <summary>Level: ${levelKey.toUpperCase()} <span style="font-size: 13px; color: #6b7280; font-weight: normal; margin-left: 10px;">(Score: ${levelData.score || 0})</span></summary>
-          
           <div class="level-content">
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
               <div style="background: #fdf2f8; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Academic Performance</h4>
+                <h4 style="margin: 0 0 5px 0; color: #9d174d;">Level Summary</h4>
                 <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
                   <li>Score: <strong>${levelData.score || 0}</strong></li>
-                  <li>Success rate per level (1st try): <strong>${successRate}%</strong></li>
-                  <li>Successful questions (1st try) / Total: <strong>${firstTryCount} / ${totalQuestions}</strong></li>
-                </ul>
-              </div>
-
-              <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
-                <h4 style="margin: 0 0 5px 0; color: #14532d;">Time & Engagement</h4>
-                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
-                  <li>Time per level (Session): <strong>${levelData.time || 0}s</strong></li>
+                  <li>First-try correct answers: <strong>${firstTryCount}</strong></li>
+                  <li>Total questions answered: <strong>${totalQuestions}</strong></li>
+                  <li>First-try rate: <strong>${successRate}%</strong></li>
+                  <li>Time spent: <strong>${levelData.time || 0}s</strong></li>
                 </ul>
               </div>
             </div>
-            
-            <h4 style="margin: 10px 0 5px 0; color: #374151;">Questions Data</h4>
-            ${questionStatsHtml}
           </div>
         </details>
       `;
@@ -336,47 +254,82 @@ async function renderPlayerDetails(player) {
     globalQuestionsAnswered > 0
       ? Math.round((globalFirstTryCount / globalQuestionsAnswered) * 100)
       : 0;
-  const averageSessionTime = player.stats?.totalSessions
-    ? Math.round(player.stats.time / player.stats.totalSessions)
-    : 0;
+
+  const firstTryPerLevelRows = Object.entries(player.levelStats)
+    .filter(([, levelData]) => levelData.attemptsPerQuestion !== undefined)
+    .map(([levelKey, levelData]) => {
+      const firstTryCount = levelData.firstTryCorrectAnswers || 0;
+      const totalQuestions = (levelData.correct || 0) + (levelData.incorrect || 0);
+      return `
+        <tr>
+          <td>${levelKey.toUpperCase()}</td>
+          <td style="text-align:center; font-weight:bold;">${firstTryCount}</td>
+          <td style="text-align:center;">${totalQuestions}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const firstTryPerLevelHtml = firstTryPerLevelRows
+    ? `
+      <table class="question-stats" style="width: 100%;">
+        <thead>
+          <tr>
+            <th>Level</th>
+            <th>Correct 1st Try</th>
+            <th>Total Questions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${firstTryPerLevelRows}
+        </tbody>
+      </table>
+    `
+    : "<p style='margin: 0; color: #6b7280;'>No new-format level stats available.</p>";
+
+  const perLevelChartsHtml = Object.keys(levelChartData)
+    .map((levelKey) => {
+      return `
+        <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+          <h4 style="margin: 0 0 10px 0;">${levelKey.toUpperCase()}</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="background:#f8fafc; padding:10px; border-radius:8px;">
+              <canvas id="levelScoreChart-${levelKey}"></canvas>
+            </div>
+            <div style="background:#f8fafc; padding:10px; border-radius:8px;">
+              <canvas id="levelTimeChart-${levelKey}"></canvas>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 
   content.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h3 style="margin: 0;">Global Overview</h3>
-      <button id="exportCsvBtn" style="padding: 8px 15px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
-        📥 Export Excel (History)
-      </button>
-    </div>
-    <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 20px; background: #fafafa; padding: 10px; border-radius: 5px;">
-      <dt style="font-weight: bold;">Username</dt><dd style="margin-left: 0;">${player.username}</dd>
-      <dt style="font-weight: bold;">Email</dt><dd style="margin-left: 0;">${player.email}</dd>
-      <dt style="font-weight: bold;">Global Success Rate (1st try)</dt><dd style="margin-left: 0; color: green; font-weight: bold;">${globalSuccessRate}%</dd>
-      <dt style="font-weight: bold;">Improvement Rate</dt><dd style="margin-left: 0;">${tauxAmelioration}%</dd>
-      <dt style="font-weight: bold;">Learning Speed</dt><dd style="margin-left: 0;">${vitesseApprentissage} pts/session</dd>
-      <dt style="font-weight: bold;">Total Playtime</dt><dd style="margin-left: 0;">${player.stats?.time ?? 0}s</dd>
-      <dt style="font-weight: bold;">Avg. Session Duration</dt><dd style="margin-left: 0;">${averageSessionTime}s</dd>
-      <dt style="font-weight: bold;">Session Frequency</dt><dd style="margin-left: 0;">${freqSessions}</dd>
-      <dt style="font-weight: bold;">Correlation (Obs. Time / Score)</dt><dd style="margin-left: 0;">${correlationMsg}</dd>
-    </dl>
-    
-    <div style="border-top: 2px solid #ccc; padding-top: 15px; margin-top: 20px; margin-bottom: 20px;">
-      <h3 style="margin-top: 0;">Analytics Charts (Chart.js)</h3>
-      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-           <canvas id="scoreVsTryChart"></canvas>
-        </div>
-        <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-           <canvas id="timeVsDayChart"></canvas>
-        </div>
-        <div style="flex: 1; min-width: 300px; max-width: 400px; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-           <canvas id="learningProgressionChart"></canvas>
-        </div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 280px; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <h3 style="margin-top: 0;">Player Overview</h3>
+        <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; color: #111827;">
+          <dt style="font-weight: 700;">Username</dt><dd style="margin: 0;">${player.username}</dd>
+          <dt style="font-weight: 700;">Email</dt><dd style="margin: 0;">${player.email}</dd>
+          <dt style="font-weight: 700;">Global success rate (1st try)</dt><dd style="margin: 0; color: #16a34a; font-weight: 700;">${globalSuccessRate}%</dd>
+          <dt style="font-weight: 700;">Total playtime</dt><dd style="margin: 0;">${player.stats?.time ?? 0}s</dd>
+        </dl>
+      </div>
+      <div style="flex: 1; min-width: 320px; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <h3 style="margin-top: 0;">Correct 1st Try per Level</h3>
+        ${firstTryPerLevelHtml}
       </div>
     </div>
 
-    <div style="border-top: 2px solid #ccc; padding-top: 15px;">
-      <h3 style="margin-top: 0;">Level Details</h3>
-      ${levelStatsHtml}
+    <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+      <h3 style="margin-top: 0;">Overview Chart</h3>
+      <canvas id="overviewChart"></canvas>
+    </div>
+
+    <div style="background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+      <h3 style="margin-top: 0;">Per-Level Charts</h3>
+      ${perLevelChartsHtml}
     </div>
   `;
 
@@ -389,78 +342,111 @@ async function renderPlayerDetails(player) {
   }
 
   // Draw Charts
-  if (historyData.length > 0) {
-    const labelsTries = historyData.map((_, i) => `T\${i + 1}`);
-    const scoreData = historyData.map((h) => h.levelScore || 0);
-    const timeData = historyData.map((h) => h.timeSpent || 0);
-    const labelsDates = historyData.map((h) =>
+  if (newFormatHistoryData.length > 0) {
+    const overviewLabels = newFormatHistoryData.map((h) =>
       new Date(h.pushedAt).toLocaleDateString(),
     );
-    const successRateData = historyData.map((h) => {
-      const qAnswered = (h.correctAnswers || 0) + (h.incorrectAnswers || 0);
-      const firstTry = h.firstTryCorrectAnswers || 0;
-      return qAnswered > 0 ? ((firstTry / qAnswered) * 100).toFixed(1) : 0;
+    const overviewFirstTryData = newFormatHistoryData.map((h) => {
+      const totalQ = (h.correctAnswers || 0) + (h.incorrectAnswers || 0);
+      return totalQ > 0 ? ((h.firstTryCorrectAnswers || 0) / totalQ) * 100 : 0;
     });
 
-    new Chart(document.getElementById("scoreVsTryChart"), {
-      type: "line",
-      data: {
-        labels: labelsTries,
-        datasets: [
-          {
-            label: "Score vs Tentative (Progression)",
-            data: scoreData,
-            borderColor: "#10b981",
-            tension: 0.1,
-          },
-        ],
-      },
-    });
-
-    new Chart(document.getElementById("timeVsDayChart"), {
-      type: "line",
-      data: {
-        labels: labelsDates,
-        datasets: [
-          {
-            label: "Temps de Rép. Moyen (s)",
-            data: timeData,
-            borderColor: "#3b82f6",
-            tension: 0.1,
-          },
-          {
-            label: "Score Global",
-            data: scoreData,
-            borderColor: "#8b5cf6",
-            tension: 0.1,
-          },
-        ],
-      },
-    });
-
-    new Chart(document.getElementById("learningProgressionChart"), {
-      type: "line",
-      data: {
-        labels: labelsTries,
-        datasets: [
-          {
-            label: "Taux de réussite (%) vs Session",
-            data: successRateData,
-            borderColor: "#f59e0b",
-            backgroundColor: "rgba(245, 158, 11, 0.2)",
-            fill: true,
-            tension: 0.1,
-          },
-        ],
-      },
-      options: {
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
+    const overviewCanvas = document.getElementById("overviewChart");
+    if (overviewCanvas) {
+      new Chart(overviewCanvas, {
+        type: "line",
+        data: {
+          labels: overviewLabels,
+          datasets: [
+            {
+              label: "1st Try Success Rate (%)",
+              data: overviewFirstTryData,
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.2)",
+              fill: true,
+              tension: 0.2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: { display: true, text: "Success Rate (%)" },
+            },
           },
         },
-      },
+      });
+    }
+
+    Object.entries(levelChartData).forEach(([levelKey, entries]) => {
+      const sortedEntries = entries.sort(
+        (a, b) => new Date(a.pushedAt) - new Date(b.pushedAt),
+      );
+      const labels = sortedEntries.map((item) =>
+        new Date(item.pushedAt).toLocaleDateString(),
+      );
+      const scores = sortedEntries.map((item) => item.score);
+      const times = sortedEntries.map((item) => item.time);
+
+      const scoreCanvas = document.getElementById(
+        `levelScoreChart-${levelKey}`,
+      );
+      const timeCanvas = document.getElementById(`levelTimeChart-${levelKey}`);
+
+      if (scoreCanvas) {
+        new Chart(scoreCanvas, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Score",
+                data: scores,
+                borderColor: "#3b82f6",
+                tension: 0.2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: "Score" },
+              },
+            },
+          },
+        });
+      }
+
+      if (timeCanvas) {
+        new Chart(timeCanvas, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Time Spent (s)",
+                data: times,
+                borderColor: "#f97316",
+                tension: 0.2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: "Time (s)" },
+              },
+            },
+          },
+        });
+      }
     });
   }
 }
