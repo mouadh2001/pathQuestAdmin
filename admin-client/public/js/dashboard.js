@@ -650,9 +650,11 @@ function prepareGlobalChartData(levelAggregates) {
       const [levelKey, levelData] = entry;
       const questions = Object.keys(levelData.questions).sort();
 
+      let accumulatedSuccesses = 0;
       questions.forEach((qId) => {
+        accumulatedSuccesses += levelData.questions[qId].firstTrySuccesses;
         labels.push(qId);
-        data.push(levelData.questions[qId].firstTrySuccesses);
+        data.push(accumulatedSuccesses);
         colors.push(colorPalette[levelIdx % colorPalette.length]);
       });
 
@@ -682,7 +684,7 @@ function renderGlobalFirstTryChart(chartData) {
       labels: chartData.labels,
       datasets: [
         {
-          label: "Players with First-Try Success",
+          label: "Accumulated First-Try Successes",
           data: chartData.data,
           backgroundColor: chartData.colors,
           borderColor: chartData.colors.map((c) => darkenColor(c)),
