@@ -550,111 +550,144 @@ window.createPlayer = createPlayer;
 function renderGlobalStats(players) {
   const container = document.getElementById("globalStats");
   const content = document.getElementById("globalStatsContent");
-
   if (!players || players.length === 0) {
     container.classList.add("hidden");
     return;
   }
 
+  container.classList.remove("hidden");
+
+  // Accumulateur pour les insights par niveau
+  const levelAggregates = {};
+
   const newPlayers = players.filter(isPlayerUsingNewStats);
   if (newPlayers.length === 0) {
-    container.classList.remove("hidden");
     content.innerHTML = `
       <div style="padding: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
         <h3 style="margin-top: 0; color: #1e40af;">No new-format player stats available</h3>
         <p style="margin: 0; color: #1e3a8a;">
-          The dashboard only shows global summary stats for players using the new statistics format.
+          The dashboard is currently ignoring legacy-format accounts and will render global statistics only when new-format player stats exist.
         </p>
       </div>
     `;
     return;
   }
 
-  container.classList.remove("hidden");
+  newPlayers.forEach((p) => {
+    if (p.levelStats) {
+      for (const [levelKey, lStats] of Object.entries(p.levelStats)) {
+        if (!levelAggregates[levelKey]) {
+          levelAggregates[levelKey] = {
+            playersCount: 0,
+            totalScore: 0,
+            totalTime: 0,
+            questions: {},
+          };
+        }
+        levelAggregates[levelKey].playersCount += 1;
+        levelAggregates[levelKey].totalScore += lStats.score || 0;
+        levelAggregates[levelKey].totalTime += lStats.time || 0;
 
-  let totalScore = 0;
-  let totalTime = 0;
-  let playersWithStats = 0;
-  let totalFirstTryCorrect = 0;
-  let totalQuestions = 0;
-  const badgeCounters = { diamond: 0, gold: 0, silver: 0, bronze: 0 };
-
-  newPlayers.forEach((player) => {
-    if (typeof player.stats?.score === "number") {
-      totalScore += player.stats.score;
-    }
-    if (typeof player.stats?.time === "number") {
-      totalTime += player.stats.time;
-    }
-    playersWithStats += 1;
-
-    if (player.levelStats) {
-      for (const levelData of Object.values(player.levelStats)) {
-        const firstTryCount = Number(levelData.firstTryCorrectAnswers) || 0;
-        const correct = Number(levelData.correct) || 0;
-        const incorrect = Number(levelData.incorrect) || 0;
-        const attemptsSum = levelData.attemptsPerQuestion
-          ? Object.values(levelData.attemptsPerQuestion).reduce(
-              (sum, attempts) => sum + (Number(attempts) || 0),
-              0,
-            )
-          : 0;
-
-        totalFirstTryCorrect += firstTryCount;
-        totalQuestions += correct + incorrect || attemptsSum;
-
-        const rankType = getRankTypeFromBadge(levelData?.badges?.rankingBadge);
-        if (rankType && badgeCounters[rankType] !== undefined) {
-          badgeCounters[rankType] += 1;
+        if (lStats.attemptsPerQuestion) {
+          for (const [qId, attempts] of Object.entries(lStats.attemptsPerQuestion)) {
+            if (!levelAggregates[levelKey].questions[qId]) {
+              levelAggregates[levelKey].questions[qId] = {
+                attemptedBy: 0,
+                correctAnswers: 0,
+                firstTrySuccesses: 0,
+              };
+            }
+            levelAggregates[levelKey].questions[qId].attemptedBy += 1;
+            if (attempts > 0) {
+              levelAggregates[levelKey].questions[qId].correctAnswers += 1;
+            }
+            if (attempts === 1) {
+              levelAggregates[levelKey].questions[qId].firstTrySuccesses += 1;
+            }
+          }
         }
       }
     }
   });
 
-  const avgScore = playersWithStats ? (totalScore / playersWithStats).toFixed(1) : 0;
-  const avgTime = playersWithStats ? (totalTime / playersWithStats).toFixed(1) : 0;
-  const firstTryRate = totalQuestions
-    ? Math.round((totalFirstTryCorrect / totalQuestions) * 100)
-    : 0;
+  let insightsHtml = "";
+  let chartData = null;
+
+  for (const [lvl, data] of Object.entries(levelAggregates)) {
+    const avgLvlScore = (data.totalScore / data.playersCount).toFixed(1);
+    const avgLvlTime = (data.totalTime / data.playersCount).toFixed(1);
+
+    let qHtml = "";
+    if (Object.keys(data.questions).length > 0) {
+      const qRows = Object.entries(data.questions)
+        .map(([qId, counts]) => {
+          return `
+          <tr>
+            <td>${qId}</td>
+            <td style="text-align: center; font-weight: bold; color: #0284c7;">${counts.correctAnswers}</td>
+            <td style="text-align: center; font-weight: bold; color: #16a34a;">${counts.firstTrySuccesses}</td>
+          </tr>
+        `;
+        })
+        .join("");
+
+      qHtml = `
+        <h4 style="margin: 15px 0 5px 0; color: #374151;">Performance per Question (out of ${data.playersCount} players total who played this level)</h4>
+        <div style="overflow-x: auto;">
+          <table class="question-stats" style="width: 100%;">
+            <thead>
+              <tr>
+                <th style="text-align: left;">Question</th>
+                <th style="text-align: center;">Players who answered correctly (Final)</th>
+                <th style="text-align: center;">Players who answered correctly (1st try)</th>
+              </tr>
+            </thead>
+            <tbody>${qRows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    insightsHtml += `
+      <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+        <h3 style="margin-top:0; color: #1e3a8a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Level : ${lvl.toUpperCase()}</h3>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin: 15px 0;">
+          <div class="metric-box" style="background: white;">
+            <div class="metric-title">Average Score</div>
+            <div class="metric-value">${avgLvlScore}</div>
+          </div>
+          <div class="metric-box" style="background: white;">
+            <div class="metric-title">Average Time (s)</div>
+            <div class="metric-value">${avgLvlTime}</div>
+          </div>
+        </div>
+        ${qHtml}
+      </div>
+    `;
+  }
+
+  // Prepare data for global chart
+  chartData = prepareGlobalChartData(levelAggregates);
 
   content.innerHTML = `
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
-      <div class="metric-card">
-        <div class="metric-label">Players included</div>
-        <div class="metric-value">${newPlayers.length}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Average score</div>
-        <div class="metric-value">${avgScore}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Average time (s)</div>
-        <div class="metric-value">${avgTime}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Overall 1st-try success rate</div>
-        <div class="metric-value">${firstTryRate}%</div>
+    <div style="width: 100%; margin-bottom: 30px;">
+      <h3 style="color: #1e3a8a; margin-bottom: 15px;">Global First-Try Success Overview</h3>
+      <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <canvas id="global-chart" style="max-height: 400px;"></canvas>
       </div>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-top: 20px;">
-      <div class="metric-card" style="background: #fef2f2; border-color: #fecaca;">
-        <div class="metric-label">Diamond badges</div>
-        <div class="metric-value">${badgeCounters.diamond}</div>
-      </div>
-      <div class="metric-card" style="background: #fffbeb; border-color: #fef08a;">
-        <div class="metric-label">Gold badges</div>
-        <div class="metric-value">${badgeCounters.gold}</div>
-      </div>
-      <div class="metric-card" style="background: #eef2ff; border-color: #c7d2fe;">
-        <div class="metric-label">Silver badges</div>
-        <div class="metric-value">${badgeCounters.silver}</div>
-      </div>
-      <div class="metric-card" style="background: #f8fafc; border-color: #cbd5e1;">
-        <div class="metric-label">Bronze badges</div>
-        <div class="metric-value">${badgeCounters.bronze}</div>
-      </div>
+    <div style="width: 100%;">
+      ${insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>"}
     </div>
   `;
+
+  // Render global chart after DOM is updated
+  setTimeout(() => {
+    if (chartData && chartData.labels.length > 0) {
+      renderGlobalFirstTryChart(chartData);
+    }
+  }, 0);
 }
 
 function prepareGlobalChartData(levelAggregates) {
