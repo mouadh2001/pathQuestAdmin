@@ -253,6 +253,7 @@ async function renderPlayerDetails(player) {
       const levelHistoryEntries = newFormatHistoryData.filter(h => h.levelKey === levelKey);
       let bestPerformance = null;
       let lastAttemptBadgeLabel = "None";
+      let bestPerformanceBadgeLabel = "None";
       if (levelHistoryEntries.length > 0) {
         bestPerformance = levelHistoryEntries.reduce((best, current) => {
           return (current.levelScore || 0) > (best.levelScore || 0) ? current : best;
@@ -264,6 +265,9 @@ async function renderPlayerDetails(player) {
         lastAttemptBadgeLabel = formatBadgeLabel(
           getRankTypeFromBadge(lastAttempt?.badges?.rankingBadge),
         );
+        bestPerformanceBadgeLabel = formatBadgeLabel(
+          getRankTypeFromBadge(bestPerformance?.badges?.rankingBadge),
+        );
       }
       
       const bestPerformanceHTML = bestPerformance ? `
@@ -272,9 +276,8 @@ async function renderPlayerDetails(player) {
           <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
             <li>Score: <strong>${bestPerformance.levelScore || 0}</strong></li>
             <li>First-try correct answers: <strong>${bestPerformance.firstTryCorrectAnswers || 0}</strong></li>
-            <li>Times played: <strong>${timesPlayed}</strong></li>
             <li>First-try rate: <strong>${bestPerformance.correctAnswers + bestPerformance.incorrectAnswers > 0 ? Math.round((bestPerformance.firstTryCorrectAnswers / (bestPerformance.correctAnswers + bestPerformance.incorrectAnswers)) * 100) : 0}%</strong></li>
-            <li>Time spent: <strong>${bestPerformance.timeSpent || 0}s</strong></li>
+            <li>Best badge earned: <strong>${bestPerformanceBadgeLabel}</strong></li>
           </ul>
         </div>
       ` : '';
