@@ -290,15 +290,68 @@ const updatePlayerStats = async (req, res) => {
     const existingLevelStats = player.levelStats.get(levelId);
     const existingScore = existingLevelStats ? existingLevelStats.score : -1;
     const incomingScore = Number(levelScore) || 0;
+    const existingFirstTry = Number(existingLevelStats?.firstTryCorrectAnswers || 0);
+    const incomingFirstTry = Number(firstTryCorrectAnswers || 0);
+
+    const rankingOrder = {
+      diamond: 4,
+      gold: 3,
+      silver: 2,
+      bronze: 1,
+    };
+
+    const getBadgeRankType = (badge = {}) => {
+      if (!badge) return null;
+      if (badge.rankType) return String(badge.rankType).toLowerCase();
+      const name = String(badge.name || "").toLowerCase();
+      if (name.includes("diamond")) return "diamond";
+      if (name.includes("gold")) return "gold";
+      if (name.includes("silver")) return "silver";
+      if (name.includes("bronze")) return "bronze";
+      return null;
+    };
+
+    const chooseBestRankingBadge = (existingBadge = {}, incomingBadge = {}) => {
+      const existingRank = getBadgeRankType(existingBadge);
+      const incomingRank = getBadgeRankType(incomingBadge);
+      if (!existingRank) return incomingBadge;
+      if (!incomingRank) return existingBadge;
+      return rankingOrder[incomingRank] >= rankingOrder[existingRank]
+        ? incomingBadge
+        : existingBadge;
+    };
+
+    const bestScore = Math.max(existingScore, incomingScore);
+    const useIncomingStats = bestScore === incomingScore;
+
+    const mergedBadges = {
+      ...(existingLevelStats?.badges || {}),
+      ...(badges || {}),
+      rankingBadge: chooseBestRankingBadge(
+        existingLevelStats?.badges?.rankingBadge,
+        badges?.rankingBadge,
+      ),
+      levelBadge:
+        badges?.levelBadge || existingLevelStats?.badges?.levelBadge || {},
+    };
 
     player.levelStats.set(levelId, {
-      score: Math.max(existingScore, incomingScore),
-      time: Number(timeSpent) || (existingLevelStats?.time || 0),
-      correct: Number(correctAnswers) || (existingLevelStats?.correct || 0),
-      incorrect: Number(incorrectAnswers) || (existingLevelStats?.incorrect || 0),
-      firstTryCorrectAnswers: Number(firstTryCorrectAnswers) || (existingLevelStats?.firstTryCorrectAnswers || 0),
-      attemptsPerQuestion,
-      badges,
+      score: bestScore,
+      time: useIncomingStats
+        ? Number(timeSpent) || (existingLevelStats?.time || 0)
+        : existingLevelStats?.time || 0,
+      correct: useIncomingStats
+        ? Number(correctAnswers) || (existingLevelStats?.correct || 0)
+        : existingLevelStats?.correct || 0,
+      incorrect: useIncomingStats
+        ? Number(incorrectAnswers) || (existingLevelStats?.incorrect || 0)
+        : existingLevelStats?.incorrect || 0,
+      firstTryCorrectAnswers: Math.max(existingFirstTry, incomingFirstTry),
+      attemptsPerQuestion:
+        useIncomingStats || !existingLevelStats?.attemptsPerQuestion
+          ? attemptsPerQuestion
+          : existingLevelStats.attemptsPerQuestion,
+      badges: mergedBadges,
     });
 
     player.character = character || player.character;

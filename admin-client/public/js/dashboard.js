@@ -98,6 +98,22 @@ function isPlayerUsingNewStats(player) {
   );
 }
 
+function getRankTypeFromBadge(badge) {
+  if (!badge) return null;
+  if (badge.rankType) return String(badge.rankType).toLowerCase();
+  const name = String(badge.name || "").toLowerCase();
+  if (name.includes("diamond")) return "diamond";
+  if (name.includes("gold")) return "gold";
+  if (name.includes("silver")) return "silver";
+  if (name.includes("bronze")) return "bronze";
+  return null;
+}
+
+function formatBadgeLabel(rankType) {
+  if (!rankType) return "None";
+  return rankType.charAt(0).toUpperCase() + rankType.slice(1);
+}
+
 async function renderPlayers() {
   const tbody = document.getElementById("playersTable");
   tbody.innerHTML = "";
@@ -203,6 +219,16 @@ async function renderPlayerDetails(player) {
       time: h.timeSpent || 0,
     });
   });
+  const badgeCounters = { diamond: 0, gold: 0, silver: 0, bronze: 0 };
+  if (player.levelStats && Object.keys(player.levelStats).length > 0) {
+    for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
+      const rankType = getRankTypeFromBadge(levelData?.badges?.rankingBadge);
+      if (rankType && badgeCounters[rankType] !== undefined) {
+        badgeCounters[rankType] += 1;
+      }
+    }
+  }
+
   if (player.levelStats && Object.keys(player.levelStats).length > 0) {
     let newFormatLevelsFound = false;
     for (const [levelKey, levelData] of Object.entries(player.levelStats)) {
@@ -226,10 +252,18 @@ async function renderPlayerDetails(player) {
       // Calculate best performance for this level
       const levelHistoryEntries = newFormatHistoryData.filter(h => h.levelKey === levelKey);
       let bestPerformance = null;
+      let lastAttemptBadgeLabel = "None";
       if (levelHistoryEntries.length > 0) {
         bestPerformance = levelHistoryEntries.reduce((best, current) => {
           return (current.levelScore || 0) > (best.levelScore || 0) ? current : best;
         });
+
+        const lastAttempt = levelHistoryEntries
+          .slice()
+          .sort((a, b) => new Date(b.pushedAt) - new Date(a.pushedAt))[0];
+        lastAttemptBadgeLabel = formatBadgeLabel(
+          getRankTypeFromBadge(lastAttempt?.badges?.rankingBadge),
+        );
       }
       
       const bestPerformanceHTML = bestPerformance ? `
@@ -274,6 +308,7 @@ async function renderPlayerDetails(player) {
                   <li>Times played: <strong>${timesPlayed}</strong></li>
                   <li>First-try rate: <strong>${successRate}%</strong></li>
                   <li>Time spent: <strong>${levelData.time || 0}s</strong></li>
+                  <li>Earned badge: <strong>${lastAttemptBadgeLabel}</strong></li>
                 </ul>
               </div>
               ${bestPerformanceHTML}
@@ -305,6 +340,10 @@ async function renderPlayerDetails(player) {
         <dt style="font-weight: 700;">Email</dt><dd style="margin: 0;">${player.email}</dd>
         <dt style="font-weight: 700;">Global success rate (1st try)</dt><dd style="margin: 0; color: #16a34a; font-weight: 700;">${globalSuccessRate}%</dd>
         <dt style="font-weight: 700;">Total playtime</dt><dd style="margin: 0;">${player.stats?.time ?? 0}s</dd>
+        <dt style="font-weight: 700;">Diamond badges</dt><dd style="margin: 0;"><strong>${badgeCounters.diamond}</strong></dd>
+        <dt style="font-weight: 700;">Golden badges</dt><dd style="margin: 0;"><strong>${badgeCounters.gold}</strong></dd>
+        <dt style="font-weight: 700;">Silver badges</dt><dd style="margin: 0;"><strong>${badgeCounters.silver}</strong></dd>
+        <dt style="font-weight: 700;">Bronze badges</dt><dd style="margin: 0;"><strong>${badgeCounters.bronze}</strong></dd>
       </dl>
     </div>
 
