@@ -142,6 +142,9 @@ async function renderPlayers() {
       <td>${p.stats?.score ?? 0}</td>
       <td>${p.stats?.time ?? 0}</td>
       <td>${new Date(p.createdAt).toLocaleString()}</td>
+      <td>
+        <button class="btn-danger btn-sm" onclick="deletePlayer('${p._id}', '${p.username}')" title="Delete Player">Delete</button>
+      </td>
     `;
 
     tr.addEventListener("click", () => selectPlayer(p._id));
@@ -159,6 +162,42 @@ async function renderPlayers() {
 async function selectPlayer(id) {
   selectedPlayerId = id;
   await renderPlayers();
+}
+
+async function deletePlayer(playerId, username) {
+  if (!confirm(`Are you sure you want to delete the player "${username}"? This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const token = getToken();
+    const response = await fetch(`${API_URL}/admin/players/${playerId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': token,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete player');
+    }
+
+    // Remove from cache
+    playersCache = playersCache.filter(p => p._id !== playerId);
+    
+    // Clear selection if deleted player was selected
+    if (selectedPlayerId === playerId) {
+      selectedPlayerId = null;
+    }
+
+    // Re-render the list
+    await renderPlayers();
+    
+    showNotification(`Player "${username}" deleted successfully`, 'success');
+  } catch (error) {
+    console.error('Error deleting player:', error);
+    showNotification('Failed to delete player: ' + error.message, 'error');
+  }
 }
 
 async function renderPlayerDetails(player) {
@@ -565,6 +604,7 @@ async function exportPlayerToExcel(player, historyData) {
   URL.revokeObjectURL(url);
 }
 window.createPlayer = createPlayer;
+window.deletePlayer = deletePlayer;
 
 function renderGlobalStats(players) {
   const container = document.getElementById("globalStats");
