@@ -21,7 +21,8 @@
         Patho Quest Admin
       </div>
       <div class="nav-links">
-        <button class="nav-link active" onclick="switchTab('players-tab')">Players Management</button>
+        <button class="nav-link active" onclick="switchTab('globalstats-tab')">Global Stats</button>
+        <button class="nav-link" onclick="window.location.href='players.html'">Players List</button>
         <button class="nav-link" onclick="switchTab('gamedata-tab')">Game Data</button>
         <button class="nav-link btn-logout" onclick="logout()">Logout</button>
       </div>
@@ -29,16 +30,11 @@
 
     <div class="container">
       
-      <!-- PLAYERS MANAGEMENT TAB -->
-      <section id="players-tab" class="tab-content active">
+      <!-- GLOBAL STATS TAB -->
+      <section id="globalstats-tab" class="tab-content active">
         <div class="form-card">
-          <h2>Create Player</h2>
-          <div class="input-group-row">
-            <input type="text" id="username" placeholder="Username" />
-            <input type="email" id="email" placeholder="Email" />
-            <input type="password" id="password" placeholder="Password" />
-            <button onclick="createPlayer()" class="btn-primary">Create Player</button>
-          </div>
+          <h2>Global Stats</h2>
+          <p class="subtitle">View aggregated performance metrics and first-try success insights across all players.</p>
         </div>
 
         <div id="globalStats" class="form-card hidden" style="margin-bottom: 20px">
@@ -50,35 +46,6 @@
             </button>
           </div>
           <div id="globalStatsContent" style="display: flex; gap: 15px; flex-wrap: wrap"></div>
-        </div>
-
-        <div class="card">
-          <h2>Players List</h2>
-          <div class="players-controls">
-            <span>Sort by:</span>
-            <button id="sortScoreBtn" type="button" class="btn-secondary">Score</button>
-            <button id="sortTimeBtn" type="button" class="btn-secondary">Time</button>
-            <button id="sortCreatedBtn" type="button" class="btn-secondary">Created</button>
-          </div>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Email</th>
-                  <th>Score</th>
-                  <th>Time (s)</th>
-                  <th>Created At</th>
-                </tr>
-              </thead>
-              <tbody id="playersTable"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div id="playerDetails" class="player-details hidden">
-          <h2>Player Details</h2>
-          <div id="detailsContent"></div>
         </div>
       </section>
 
@@ -149,11 +116,15 @@
     <script type="module" src="./js/gameData.js"></script>
     <script>
       let gameDataLoaded = false;
-      function switchTab(tabId) {
+      function switchTab(tabId, button) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
+
+        const activeLink = button || document.querySelector(`.nav-link[onclick*="${tabId}"]`);
+        if (activeLink) {
+          activeLink.classList.add('active');
+        }
 
         if (tabId === 'gamedata-tab' && !gameDataLoaded && window.loadGameData) {
           window.loadGameData();

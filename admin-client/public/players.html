@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Players List - Patho Quest Admin</title>
+    <link rel="stylesheet" href="./css/dashboard.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="notification" class="notification"></div>
+
+    <nav class="navbar">
+      <div class="nav-brand">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        Patho Quest Admin
+      </div>
+      <div class="nav-links">
+        <button class="nav-link" onclick="window.location.href='dashboard.html'">Global Stats</button>
+        <button class="nav-link active" onclick="window.location.href='players.html'">Players List</button>
+        <button class="nav-link" onclick="window.location.href='dashboard.html#gamedata-tab'">Game Data</button>
+        <button class="nav-link btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <section id="players-page" class="tab-content active">
+        <div class="form-card">
+          <h2>Create Player</h2>
+          <div class="input-group-row">
+            <input type="text" id="username" placeholder="Username" />
+            <input type="email" id="email" placeholder="Email" />
+            <input type="password" id="password" placeholder="Password" />
+            <button onclick="createPlayer()" class="btn-primary">Create Player</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Players List</h2>
+          <div class="players-controls">
+            <span>Sort by:</span>
+            <button id="sortScoreBtn" type="button" class="btn-secondary">Score</button>
+            <button id="sortTimeBtn" type="button" class="btn-secondary">Time</button>
+            <button id="sortCreatedBtn" type="button" class="btn-secondary">Created</button>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Score</th>
+                  <th>Time (s)</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody id="playersTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="playerDetails" class="player-details hidden">
+          <h2>Player Details</h2>
+          <div id="detailsContent"></div>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="./js/dashboard.js"></script>
+    <script>
+      function logout() {
+        localStorage.removeItem('adminToken');
+        window.location.href = 'login.html';
+      }
+    </script>
+  </body>
+</html>

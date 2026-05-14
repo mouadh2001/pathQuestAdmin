@@ -116,6 +116,7 @@ function formatBadgeLabel(rankType) {
 
 async function renderPlayers() {
   const tbody = document.getElementById("playersTable");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   const sortedPlayers = [...playersCache].sort((a, b) => {
@@ -442,16 +443,34 @@ async function setSort(key) {
 }
 
 window.onload = () => {
-  document
-    .getElementById("sortScoreBtn")
-    .addEventListener("click", () => setSort("score"));
-  document
-    .getElementById("sortTimeBtn")
-    .addEventListener("click", () => setSort("time"));
-  document
-    .getElementById("sortCreatedBtn")
-    .addEventListener("click", () => setSort("createdAt"));
-  loadPlayers();
+  const sortScoreBtn = document.getElementById("sortScoreBtn");
+  const sortTimeBtn = document.getElementById("sortTimeBtn");
+  const sortCreatedBtn = document.getElementById("sortCreatedBtn");
+
+  if (sortScoreBtn) {
+    sortScoreBtn.addEventListener("click", () => setSort("score"));
+  }
+  if (sortTimeBtn) {
+    sortTimeBtn.addEventListener("click", () => setSort("time"));
+  }
+  if (sortCreatedBtn) {
+    sortCreatedBtn.addEventListener("click", () => setSort("createdAt"));
+  }
+
+  const globalStatsContainer = document.getElementById("globalStats");
+  const playersTable = document.getElementById("playersTable");
+
+  if (globalStatsContainer || playersTable) {
+    loadPlayers();
+  }
+
+  const hash = window.location.hash;
+  if (hash === "#gamedata-tab") {
+    const gameDataTab = document.getElementById("gamedata-tab");
+    if (gameDataTab) {
+      switchTab("gamedata-tab");
+    }
+  }
 };
 
 async function exportPlayerToExcel(player, historyData) {
@@ -550,6 +569,8 @@ window.createPlayer = createPlayer;
 function renderGlobalStats(players) {
   const container = document.getElementById("globalStats");
   const content = document.getElementById("globalStatsContent");
+  if (!container || !content) return;
+
   if (!players || players.length === 0) {
     container.classList.add("hidden");
     return;
