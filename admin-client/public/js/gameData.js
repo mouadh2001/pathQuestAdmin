@@ -1,12 +1,14 @@
 // gameData.js
 let currentQuestions = {};
 let currentBonusInfo = [];
+let currentQuestionCount = 1;
+let currentBadgeDataUrl = "";
 
 export async function loadGameData() {
   const level = document.getElementById('levelSelect').value;
   const editor = document.getElementById('gameDataEditor');
   const loader = document.getElementById('gameDataLoading');
-  
+
   editor.classList.add('hidden');
   loader.classList.remove('hidden');
 
@@ -15,8 +17,8 @@ export async function loadGameData() {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-      }
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+      },
     });
 
     if (!response.ok) {
@@ -24,22 +26,24 @@ export async function loadGameData() {
     }
 
     const data = await response.json();
-    
-    // Set Level Info
+
     document.getElementById('levelHint').value = data.hint || '';
     document.getElementById('levelLoupeLink').value = data.loupeLink || '';
-    document.getElementById('levelBadgeUrl').value = data.badgeUrl || '';
-    
-    currentBonusInfo = data.bonusInfo || [];
+    currentQuestionCount = Number(data.questionCount) || Object.keys(data.questions || {}).length || 1;
+    document.getElementById('levelQuestionCount').value = currentQuestionCount;
+
+    currentBadgeDataUrl = data.badgeUrl || '';
+    document.getElementById('levelBadgeUrl').value = currentBadgeDataUrl;
+    updateLevelBadgePreview();
+
+    currentBonusInfo = Array.isArray(data.bonusInfo) ? data.bonusInfo : [];
     renderBonusInfo();
-    
-    // Set Questions
-    currentQuestions = data.questions || {};
+
+    currentQuestions = normalizeQuestions(data.questions || {}, currentQuestionCount);
     renderQuestions();
 
     loader.classList.add('hidden');
     editor.classList.remove('hidden');
-
   } catch (error) {
     console.error(error);
     showNotification(error.message, 'error');
@@ -47,132 +51,297 @@ export async function loadGameData() {
   }
 }
 
+function normalizeQuestions(questions = {}, count = 1) {
+  const normalized = {};
+  for (let i = 1; i <= count; i++) {
+    const key = `q${i}`;
+    normalized[key] = normalizeQuestion(questions[key]);
+  }
+  return normalized;
+}
+
+function normalizeQuestion(source = {}) {
+  const answers = Array.isArray(source.a) && source.a.length > 0 ? source.a.slice() : ['', '', '', ''];
+  const feedbacks = Array.isArray(source.feedbacks) ? source.feedbacks.slice() : [];
+
+  while (feedbacks.length < answers.length) {
+    feedbacks.push({ text: '', imgs: [] });
+  }
+
+  return {
+    q: source.q || '',
+    imgs: Array.isArray(source.imgs) ? source.imgs : [],
+    a: answers,
+    c: Array.isArray(source.c) ? source.c : [0],
+    feedbacks: feedbacks.map((item) => ({
+      text: item?.text || '',
+      imgs: Array.isArray(item?.imgs) ? item.imgs : [],
+    })),
+  };
+}
+
+function createEmptyQuestion() {
+  return {
+    q: '',
+    imgs: [],
+    a: ['', '', '', ''],
+    c: [0],
+    feedbacks: [{ text: '', imgs: [] }],
+  };
+}
+
 function renderQuestions() {
   const container = document.getElementById('questionsContainer');
   container.innerHTML = '';
 
-  const qKeys = Object.keys(currentQuestions);
-  
-  if (qKeys.length === 0) {
-    container.innerHTML = '<p>No questions found for this level.</p>';
+  if (currentQuestionCount <= 0) {
+    container.innerHTML = '<p class="text-muted">Set at least one question for this level.</p>';
     return;
   }
 
-  qKeys.forEach((qKey, index) => {
-    const qData = currentQuestions[qKey];
-    const qIndex = index + 1;
-    
+  for (let index = 1; index <= currentQuestionCount; index++) {
+    const qKey = `q${index}`;
+    const qData = currentQuestions[qKey] || createEmptyQuestion();
+
     const qCard = document.createElement('div');
     qCard.className = 'question-card';
-    
+
     const qHeader = document.createElement('div');
     qHeader.className = 'question-header';
-    qHeader.innerHTML = `<span>Question ${qIndex} (${qKey})</span><span>▼</span>`;
+    qHeader.innerHTML = `<span>Question ${index} (${qKey})</span><span>▼</span>`;
     qHeader.onclick = () => toggleAccordion(qHeader);
 
     const qBody = document.createElement('div');
     qBody.className = 'question-body';
 
-    const qImagesStr = qData.imgs ? qData.imgs.join(', ') : '';
-
-    // Question Text Input
-    const qTextGroup = document.createElement('div');
-    qTextGroup.className = 'form-group';
-    qTextGroup.innerHTML = `
-      <label>Question Text</label>
-      <input type="text" class="form-control" value="${escapeHtml(qData.q)}" onchange="updateQuestionText('${qKey}', this.value)" />
-      <label class="mt-10">Question Images (Comma separated URLs/paths)</label>
-      <input type="text" class="form-control" value="${escapeHtml(qImagesStr)}" onchange="updateQuestionImages('${qKey}', this.value)" />
+    qBody.innerHTML = `
+      <div class="form-group">
+        <label>Question Text</label>
+        <input id="qText-${qKey}" type="text" class="form-control" value="${escapeHtml(qData.q)}" />
+      </div>
+      <div class="form-group">
+        <label>Question Images</label>
+        <input id="qImages-${qKey}" type="file" class="form-control-file" accept="image/*" multiple />
+        <div id="qImagesPreview-${qKey}" class="image-preview"></div>
+      </div>
+      <div class="options-container">
+        <h4>Answers & Feedback</h4>
+      </div>
     `;
-    qBody.appendChild(qTextGroup);
 
-    // Options Container
-    const optsContainer = document.createElement('div');
-    optsContainer.className = 'options-container';
-    optsContainer.innerHTML = '<h4>Answers & Feedback</h4>';
+    const qTextInput = qBody.querySelector(`#qText-${qKey}`);
+    qTextInput.addEventListener('change', (event) => updateQuestionText(qKey, event.target.value));
 
+    const qImagesInput = qBody.querySelector(`#qImages-${qKey}`);
+    qImagesInput.addEventListener('change', (event) => handleQuestionImagesUpload(qKey, event.target.files));
+    renderImagePreview(qBody.querySelector(`#qImagesPreview-${qKey}`), qData.imgs, (imageIndex) => {
+      removeQuestionImage(qKey, imageIndex);
+      renderQuestions();
+    });
+
+    const optsContainer = qBody.querySelector('.options-container');
     qData.a.forEach((ans, aIndex) => {
       const isCorrect = qData.c.includes(aIndex);
-      const feedback = qData.feedbacks && qData.feedbacks[aIndex] ? qData.feedbacks[aIndex] : { text: '', imgs: [] };
-      const imagesStr = feedback.imgs ? feedback.imgs.join(', ') : '';
+      const feedback = qData.feedbacks[aIndex] || { text: '', imgs: [] };
 
       const optItem = document.createElement('div');
       optItem.className = 'option-item';
       optItem.innerHTML = `
         <div class="option-header">
-          <input type="checkbox" class="correct-checkbox" ${isCorrect ? 'checked' : ''} onchange="toggleCorrectAnswer('${qKey}', ${aIndex}, this.checked)" title="Mark as correct" />
-          <input type="text" class="form-control" value="${escapeHtml(ans)}" onchange="updateOptionText('${qKey}', ${aIndex}, this.value)" placeholder="Answer option" />
+          <label class="correct-toggle">
+            <input id="correct-${qKey}-${aIndex}" type="checkbox" ${isCorrect ? 'checked' : ''} />
+            <span>Correct</span>
+          </label>
+          <input id="option-${qKey}-${aIndex}" type="text" class="form-control" value="${escapeHtml(ans)}" placeholder="Answer option" />
         </div>
         <div class="form-group mt-10">
           <label>Feedback Text</label>
-          <textarea class="form-control" rows="2" onchange="updateFeedbackText('${qKey}', ${aIndex}, this.value)">${escapeHtml(feedback.text)}</textarea>
+          <textarea id="feedbackText-${qKey}-${aIndex}" class="form-control" rows="2">${escapeHtml(feedback.text)}</textarea>
         </div>
         <div class="form-group">
-          <label>Feedback Images (Comma separated URLs/paths)</label>
-          <input type="text" class="form-control" value="${escapeHtml(imagesStr)}" onchange="updateFeedbackImages('${qKey}', ${aIndex}, this.value)" />
+          <label>Feedback Images</label>
+          <input id="feedbackImages-${qKey}-${aIndex}" type="file" class="form-control-file" accept="image/*" multiple />
+          <div id="feedbackImagesPreview-${qKey}-${aIndex}" class="image-preview"></div>
         </div>
       `;
-      optsContainer.appendChild(optItem);
-    });
 
-    qBody.appendChild(optsContainer);
+      optsContainer.appendChild(optItem);
+
+      const correctInput = optItem.querySelector(`#correct-${qKey}-${aIndex}`);
+      correctInput.addEventListener('change', (event) => toggleCorrectAnswer(qKey, aIndex, event.target.checked));
+
+      const answerInput = optItem.querySelector(`#option-${qKey}-${aIndex}`);
+      answerInput.addEventListener('change', (event) => updateOptionText(qKey, aIndex, event.target.value));
+
+      const feedbackText = optItem.querySelector(`#feedbackText-${qKey}-${aIndex}`);
+      feedbackText.addEventListener('change', (event) => updateFeedbackText(qKey, aIndex, event.target.value));
+
+      const feedbackImagesInput = optItem.querySelector(`#feedbackImages-${qKey}-${aIndex}`);
+      feedbackImagesInput.addEventListener('change', (event) => handleFeedbackImagesUpload(qKey, aIndex, event.target.files));
+      renderImagePreview(optItem.querySelector(`#feedbackImagesPreview-${qKey}-${aIndex}`), feedback.imgs, (imageIndex) => {
+        removeFeedbackImage(qKey, aIndex, imageIndex);
+        renderQuestions();
+      });
+    });
 
     qCard.appendChild(qHeader);
     qCard.appendChild(qBody);
     container.appendChild(qCard);
-  });
-  
-  // Add a final "Save All Game Data" button at the bottom of the container
+  }
+
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn-success mt-20';
-  saveBtn.innerHTML = 'Save All Game Data';
-  saveBtn.style.marginTop = '20px';
+  saveBtn.innerText = 'Save All Game Data';
   saveBtn.style.width = '100%';
-  saveBtn.onclick = saveGameData;
+  saveBtn.addEventListener('click', saveGameData);
   container.appendChild(saveBtn);
 }
 
 function toggleAccordion(headerElement) {
   headerElement.classList.toggle('open');
   const body = headerElement.nextElementSibling;
-  body.classList.toggle('open');
+  if (body) body.classList.toggle('open');
   const span = headerElement.querySelectorAll('span')[1];
-  span.textContent = headerElement.classList.contains('open') ? '▲' : '▼';
+  if (span) span.textContent = headerElement.classList.contains('open') ? '▲' : '▼';
 }
 
-// State Updaters
-window.updateQuestionText = (qKey, val) => { currentQuestions[qKey].q = val; };
-window.updateQuestionImages = (qKey, val) => {
-  currentQuestions[qKey].imgs = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+function renderImagePreview(container, images, onRemove) {
+  container.innerHTML = '';
+  if (!Array.isArray(images) || images.length === 0) {
+    return;
+  }
+
+  images.forEach((imgSrc, imageIndex) => {
+    const previewCard = document.createElement('div');
+    previewCard.className = 'image-chip';
+
+    const previewImg = document.createElement('img');
+    previewImg.src = imgSrc;
+    previewImg.alt = `Image ${imageIndex + 1}`;
+    previewImg.loading = 'lazy';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn-remove-image';
+    removeBtn.innerText = '×';
+    removeBtn.title = 'Remove image';
+    removeBtn.addEventListener('click', () => onRemove(imageIndex));
+
+    previewCard.appendChild(previewImg);
+    previewCard.appendChild(removeBtn);
+    container.appendChild(previewCard);
+  });
+}
+
+window.updateQuestionCount = (value) => {
+  const count = Math.max(1, Math.min(20, Number(value) || 1));
+  currentQuestionCount = count;
+  document.getElementById('levelQuestionCount').value = currentQuestionCount;
+  currentQuestions = normalizeQuestions(currentQuestions, currentQuestionCount);
+  renderQuestions();
 };
-window.updateOptionText = (qKey, aIndex, val) => { currentQuestions[qKey].a[aIndex] = val; };
+
+window.handleLevelBadgeUpload = async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  currentBadgeDataUrl = await readFileAsDataUrl(file);
+  document.getElementById('levelBadgeUrl').value = currentBadgeDataUrl;
+  updateLevelBadgePreview();
+};
+
+function updateLevelBadgePreview() {
+  const preview = document.getElementById('levelBadgePreview');
+  if (!preview) return;
+  preview.innerHTML = '';
+  if (!currentBadgeDataUrl) return;
+
+  const img = document.createElement('img');
+  img.src = currentBadgeDataUrl;
+  img.alt = 'Level Badge';
+  img.className = 'preview-image';
+  preview.appendChild(img);
+}
+
+window.handleQuestionImagesUpload = async (qKey, files) => {
+  if (!files || files.length === 0) return;
+  currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
+  currentQuestions[qKey].imgs = await readFilesAsDataUrls(files);
+  renderQuestions();
+};
+
+window.handleFeedbackImagesUpload = async (qKey, answerIndex, files) => {
+  if (!files || files.length === 0) return;
+  currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
+  if (!currentQuestions[qKey].feedbacks) currentQuestions[qKey].feedbacks = [];
+  if (!currentQuestions[qKey].feedbacks[answerIndex]) {
+    currentQuestions[qKey].feedbacks[answerIndex] = { text: '', imgs: [] };
+  }
+  currentQuestions[qKey].feedbacks[answerIndex].imgs = await readFilesAsDataUrls(files);
+  renderQuestions();
+};
+
+window.removeQuestionImage = (qKey, imageIndex) => {
+  if (currentQuestions[qKey]?.imgs) {
+    currentQuestions[qKey].imgs.splice(imageIndex, 1);
+  }
+};
+
+window.removeFeedbackImage = (qKey, answerIndex, imageIndex) => {
+  if (currentQuestions[qKey]?.feedbacks?.[answerIndex]?.imgs) {
+    currentQuestions[qKey].feedbacks[answerIndex].imgs.splice(imageIndex, 1);
+  }
+};
+
+window.updateQuestionText = (qKey, val) => {
+  currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
+  currentQuestions[qKey].q = val;
+};
+
+window.updateOptionText = (qKey, aIndex, val) => {
+  currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
+  currentQuestions[qKey].a[aIndex] = val;
+};
+
 window.updateFeedbackText = (qKey, aIndex, val) => {
-  if(!currentQuestions[qKey].feedbacks) currentQuestions[qKey].feedbacks = [];
-  if(!currentQuestions[qKey].feedbacks[aIndex]) currentQuestions[qKey].feedbacks[aIndex] = {text:'', imgs:[]};
+  currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
+  if (!currentQuestions[qKey].feedbacks) currentQuestions[qKey].feedbacks = [];
+  if (!currentQuestions[qKey].feedbacks[aIndex]) {
+    currentQuestions[qKey].feedbacks[aIndex] = { text: '', imgs: [] };
+  }
   currentQuestions[qKey].feedbacks[aIndex].text = val;
 };
-window.updateFeedbackImages = (qKey, aIndex, val) => {
-  if(!currentQuestions[qKey].feedbacks) currentQuestions[qKey].feedbacks = [];
-  if(!currentQuestions[qKey].feedbacks[aIndex]) currentQuestions[qKey].feedbacks[aIndex] = {text:'', imgs:[]};
-  currentQuestions[qKey].feedbacks[aIndex].imgs = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
-};
+
 window.toggleCorrectAnswer = (qKey, aIndex, isChecked) => {
-  const cArr = currentQuestions[qKey].c;
+  currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
+  const cArr = Array.isArray(currentQuestions[qKey].c) ? currentQuestions[qKey].c : [];
   if (isChecked) {
     if (!cArr.includes(aIndex)) cArr.push(aIndex);
   } else {
     const idx = cArr.indexOf(aIndex);
     if (idx > -1) cArr.splice(idx, 1);
   }
+  currentQuestions[qKey].c = cArr;
 };
 
-// Bonus Info Management
 window.addBonusInfoPage = () => {
   currentBonusInfo.push({ text: '', image: '' });
   renderBonusInfo();
 };
-window.updateBonusInfoText = (index, val) => { currentBonusInfo[index].text = val; };
-window.updateBonusInfoImage = (index, val) => { currentBonusInfo[index].image = val; };
+
+window.updateBonusInfoText = (index, val) => {
+  currentBonusInfo[index] = currentBonusInfo[index] || { text: '', image: '' };
+  currentBonusInfo[index].text = val;
+};
+
+window.handleBonusInfoImageUpload = async (index, event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const imageUrl = await readFileAsDataUrl(file);
+  currentBonusInfo[index] = currentBonusInfo[index] || { text: '', image: '' };
+  currentBonusInfo[index].image = imageUrl;
+  renderBonusInfo();
+};
+
 window.removeBonusInfoPage = (index) => {
   currentBonusInfo.splice(index, 1);
   renderBonusInfo();
@@ -180,15 +349,17 @@ window.removeBonusInfoPage = (index) => {
 
 function renderBonusInfo() {
   const container = document.getElementById('bonusInfoContainer');
+  if (!container) return;
   container.innerHTML = '';
+
   if (currentBonusInfo.length === 0) {
     container.innerHTML = '<p class="text-muted">No bonus pages added yet.</p>';
     return;
   }
+
   currentBonusInfo.forEach((page, index) => {
     const card = document.createElement('div');
-    card.className = 'card mt-10 p-10';
-    card.style.background = '#f8f9fa';
+    card.className = 'card mt-10 p-10 bonus-card';
     card.innerHTML = `
       <div class="flex-between">
         <strong>Page ${index + 1}</strong>
@@ -196,18 +367,26 @@ function renderBonusInfo() {
       </div>
       <div class="form-group mt-10">
         <label>Text</label>
-        <textarea class="form-control" rows="2" onchange="updateBonusInfoText(${index}, this.value)">${escapeHtml(page.text)}</textarea>
+        <textarea id="bonusText-${index}" class="form-control" rows="2">${escapeHtml(page.text)}</textarea>
       </div>
-      <div class="form-group mt-10">
-        <label>Image URL/path</label>
-        <input type="text" class="form-control" value="${escapeHtml(page.image)}" onchange="updateBonusInfoImage(${index}, this.value)" placeholder="../assets/bonusinfo/..." />
+      <div class="form-group">
+        <label>Image</label>
+        <input id="bonusImage-${index}" type="file" accept="image/*" class="form-control-file" />
+        <div id="bonusImagePreview-${index}" class="image-preview"></div>
       </div>
     `;
+
     container.appendChild(card);
+    document.getElementById(`bonusText-${index}`).addEventListener('change', (event) => updateBonusInfoText(index, event.target.value));
+    document.getElementById(`bonusImage-${index}`).addEventListener('change', (event) => handleBonusInfoImageUpload(index, event));
+    renderImagePreview(document.getElementById(`bonusImagePreview-${index}`), page.image ? [page.image] : [], () => {
+      currentBonusInfo[index].image = '';
+      renderBonusInfo();
+    });
   });
 }
 
-export async function saveGameData() {
+async function saveGameData() {
   const level = document.getElementById('levelSelect').value;
   const hint = document.getElementById('levelHint').value;
   const loupeLink = document.getElementById('levelLoupeLink').value;
@@ -218,13 +397,20 @@ export async function saveGameData() {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
       },
-      body: JSON.stringify({ hint, loupeLink, bonusInfo: currentBonusInfo, badgeUrl, questions: currentQuestions })
+      body: JSON.stringify({
+        hint,
+        loupeLink,
+        bonusInfo: currentBonusInfo,
+        badgeUrl,
+        questionCount: currentQuestionCount,
+        questions: currentQuestions,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to save game data.");
+      throw new Error('Failed to save game data.');
     }
 
     showNotification(`Game data for ${level} saved successfully!`, 'success');
@@ -234,31 +420,44 @@ export async function saveGameData() {
   }
 }
 
-// Make functions available globally so HTML onclick handlers can find them
 window.loadGameData = loadGameData;
 window.saveLevelConfig = saveGameData;
 window.saveGameData = saveGameData;
 
 function showNotification(message, type = 'info') {
   const toast = document.getElementById('notification');
-  if(!toast) return alert(message);
-  
+  if (!toast) {
+    alert(message);
+    return;
+  }
+
   toast.textContent = message;
   toast.className = `notification ${type} show`;
-  
   setTimeout(() => {
     toast.classList.remove('show');
-  }, 3000);
+  }, 4000);
 }
 
-// Helper to escape HTML characters in inputs
 function escapeHtml(unsafe) {
-  if(!unsafe) return '';
+  if (!unsafe) return '';
   return unsafe
-      .toString()
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    .toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFilesAsDataUrls(files) {
+  return Promise.all(Array.from(files).map(readFileAsDataUrl));
 }

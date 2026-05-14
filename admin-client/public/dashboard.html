@@ -81,14 +81,20 @@
               <input type="text" id="levelLoupeLink" class="form-control" placeholder="https://..." />
             </div>
             <div class="form-group">
+              <label>Number of Questions</label>
+              <input type="number" id="levelQuestionCount" class="form-control" min="1" max="20" onchange="updateQuestionCount(this.value)" />
+            </div>
+            <div class="form-group">
               <label>Bonus Info Pages</label>
               <div id="bonusInfoContainer" class="bonus-info-container"></div>
               <button type="button" onclick="addBonusInfoPage()" class="btn-secondary mt-10">+ Add Bonus Page</button>
             </div>
 
             <div class="form-group">
-              <label>Level Completion Badge (Image URL/path)</label>
-              <input type="text" id="levelBadgeUrl" class="form-control" placeholder="../assets/items/badge_level1.png" />
+              <label>Level Completion Badge</label>
+              <input type="file" id="levelBadgeUpload" accept="image/*" class="form-control-file" onchange="handleLevelBadgeUpload(event)" />
+              <input type="hidden" id="levelBadgeUrl" />
+              <div id="levelBadgePreview" class="image-preview"></div>
             </div>
             <button onclick="saveLevelConfig()" class="btn-primary mt-10">Save Level Info</button>
           </div>

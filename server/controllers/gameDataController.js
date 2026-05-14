@@ -79,7 +79,8 @@ export const getGameData = async (req, res) => {
       loupeLink: data.loupeLink,
       bonusInfo: data.bonusInfo,
       badgeUrl: data.badgeUrl,
-      questions: data.questions
+      questionCount: data.questionCount,
+      questions: data.questions,
     });
 
   } catch (error) {
@@ -90,7 +91,7 @@ export const getGameData = async (req, res) => {
 
 export const updateGameData = async (req, res) => {
   const { level } = req.params;
-  const { hint, loupeLink, bonusInfo, badgeUrl, questions } = req.body;
+  const { hint, loupeLink, bonusInfo, badgeUrl, questions, questionCount } = req.body;
 
   try {
     let data = await GameData.findOne({ levelId: level });
@@ -106,6 +107,7 @@ export const updateGameData = async (req, res) => {
     if (loupeLink !== undefined) data.loupeLink = loupeLink;
     if (bonusInfo !== undefined) data.bonusInfo = bonusInfo;
     if (badgeUrl !== undefined) data.badgeUrl = badgeUrl;
+    if (questionCount !== undefined) data.questionCount = Number(questionCount);
     data.questions = questions;
 
     await data.save();
