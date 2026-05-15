@@ -50,7 +50,8 @@ body {
 }
 
 /* ====== Button ====== */
-.login-container button {
+.login-container button,
+.login-container .btn-login {
   width: 100%;
   padding: 12px 0;
   background-color: #4e54c8;
@@ -60,11 +61,40 @@ body {
   font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
-.login-container button:hover {
+.login-container button:hover,
+.login-container .btn-login:hover {
   background-color: #3b3fc1;
   box-shadow: 0 5px 15px rgba(78, 84, 200, 0.3);
+}
+
+.loader {
+  display: none;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-login.loading .btn-text {
+  display: none;
+}
+
+.btn-login.loading .loader {
+  display: block;
 }
 
 /* ====== Responsive ====== */

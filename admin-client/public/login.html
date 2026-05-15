@@ -10,7 +10,10 @@
       <h2>Path Quest Admin</h2>
       <input type="email" id="email" placeholder="Email" />
       <input type="password" id="password" placeholder="Password" />
-      <button onclick="login()">Login</button>
+      <button id="loginButton" class="btn-login" onclick="login()">
+        <span class="btn-text">Login</span>
+        <span class="loader"></span>
+      </button>
     </div>
 
     <script type="module" src="./js/login.js"></script>

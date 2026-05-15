@@ -589,3 +589,49 @@ details.level-details[open] summary::before {
   .nav-link { padding: 0 10px; font-size: 13px; }
   .container { padding: 0 15px 40px; }
 }
+
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.confirm-modal.hidden {
+  display: none;
+}
+
+.confirm-modal-content {
+  width: min(420px, calc(100% - 32px));
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+  text-align: left;
+}
+
+.confirm-modal-content h3 {
+  margin: 0 0 16px;
+  font-size: 1.15rem;
+  color: #111827;
+}
+
+.confirm-modal-content p {
+  margin: 0 0 24px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-modal-actions .btn-secondary,
+.confirm-modal-actions .btn-danger {
+  min-width: 110px;
+}

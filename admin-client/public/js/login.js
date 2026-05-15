@@ -17,6 +17,12 @@ function showNotification(message, type = "error", duration = 4000) {
 }
 
 async function login() {
+  const loginButton = document.getElementById("loginButton");
+  if (loginButton) {
+    loginButton.classList.add("loading");
+    loginButton.disabled = true;
+  }
+
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
@@ -38,6 +44,11 @@ async function login() {
   } catch (err) {
     console.error(err);
     showNotification("Server error", "error");
+  } finally {
+    if (loginButton) {
+      loginButton.classList.remove("loading");
+      loginButton.disabled = false;
+    }
   }
 }
 

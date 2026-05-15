@@ -174,7 +174,7 @@ async function renderPlayers() {
       <td>${p.stats?.time ?? 0}</td>
       <td>${new Date(p.createdAt).toLocaleString()}</td>
       <td>
-        <button class="btn-danger btn-sm" onclick="deletePlayer('${p._id}', '${p.username}')" title="Delete Player">Delete</button>
+        <button class="btn-danger btn-sm" onclick="requestPlayerDelete('${p._id}', '${p.username}')" title="Delete Player">Delete</button>
       </td>
     `;
 
@@ -195,10 +195,42 @@ async function selectPlayer(id) {
   await renderPlayers();
 }
 
-async function deletePlayer(playerId, username) {
-  if (!confirm(`Are you sure you want to delete the player "${username}"? This action cannot be undone.`)) {
+let pendingDeletePlayerId = null;
+let pendingDeleteUsername = null;
+
+function requestPlayerDelete(playerId, username) {
+  pendingDeletePlayerId = playerId;
+  pendingDeleteUsername = username;
+  const modal = document.getElementById('deleteConfirmModal');
+  const message = document.getElementById('deleteConfirmMessage');
+
+  if (message) {
+    message.textContent = `Are you sure you want to delete player "${username}"? This action cannot be undone.`;
+  }
+
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
+}
+
+function closeDeleteModal() {
+  pendingDeletePlayerId = null;
+  pendingDeleteUsername = null;
+  const modal = document.getElementById('deleteConfirmModal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+}
+
+async function confirmDeletePlayer() {
+  if (!pendingDeletePlayerId) {
+    closeDeleteModal();
     return;
   }
+
+  const playerId = pendingDeletePlayerId;
+  const username = pendingDeleteUsername;
+  closeDeleteModal();
 
   try {
     const token = getToken();
@@ -214,22 +246,24 @@ async function deletePlayer(playerId, username) {
       throw new Error(errorData?.message || 'Failed to delete player');
     }
 
-    // Remove from cache
-    playersCache = playersCache.filter(p => p._id !== playerId);
-    
-    // Clear selection if deleted player was selected
+    playersCache = playersCache.filter((p) => p._id !== playerId);
+
     if (selectedPlayerId === playerId) {
       selectedPlayerId = null;
     }
 
-    // Re-render the list
     await renderPlayers();
-    
+
     showNotification(`Player "${username}" deleted successfully`, 'success');
   } catch (error) {
     console.error('Error deleting player:', error);
     showNotification('Failed to delete player: ' + error.message, 'error');
   }
+}
+
+async function deletePlayer(playerId, username) {
+  // kept for compatibility, route through the new confirmation modal
+  requestPlayerDelete(playerId, username);
 }
 
 async function renderPlayerDetails(player) {
