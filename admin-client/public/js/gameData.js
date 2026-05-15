@@ -22,7 +22,13 @@ export async function loadGameData() {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch data for ${level}`);
+      if (response.status === 404) {
+        showNotification(`No game data found for ${level}.`, 'warning');
+        loader.classList.add('hidden');
+        return;
+      }
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(errorBody?.message || `Failed to fetch data for ${level}`);
     }
 
     const data = await response.json();

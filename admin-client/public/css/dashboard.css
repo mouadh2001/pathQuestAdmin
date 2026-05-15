@@ -576,6 +576,11 @@ details.level-details[open] summary::before {
   border-left: 4px solid #dc2626;
 }
 
+.notification.warning {
+  background-color: #f59e0b;
+  border-left: 4px solid #d97706;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .input-group-row { flex-direction: column; }

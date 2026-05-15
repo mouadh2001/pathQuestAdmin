@@ -171,7 +171,7 @@ async function deletePlayer(playerId, username) {
 
   try {
     const token = getToken();
-    const response = await fetch(`${API_URL}/admin/players/${playerId}`, {
+    const response = await fetch(`/api/admin/players/${playerId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': token,
@@ -179,7 +179,8 @@ async function deletePlayer(playerId, username) {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to delete player');
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || 'Failed to delete player');
     }
 
     // Remove from cache
