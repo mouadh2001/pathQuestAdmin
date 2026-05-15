@@ -431,10 +431,11 @@ window.saveLevelConfig = saveGameData;
 window.saveGameData = saveGameData;
 
 function showNotification(message, type = 'info') {
-  const toast = document.getElementById('notification');
+  let toast = document.getElementById('notification');
   if (!toast) {
-    alert(message);
-    return;
+    toast = document.createElement('div');
+    toast.id = 'notification';
+    document.body.appendChild(toast);
   }
 
   toast.textContent = message;

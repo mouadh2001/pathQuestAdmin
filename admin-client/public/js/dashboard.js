@@ -114,14 +114,45 @@ function formatBadgeLabel(rankType) {
   return rankType.charAt(0).toUpperCase() + rankType.slice(1);
 }
 
+function getPlayerSuccessRate(player) {
+  if (!player || !player.levelStats) return 0;
+
+  const levelStats = player.levelStats;
+  const statValues = Array.isArray(levelStats)
+    ? levelStats
+    : Object.values(levelStats || {});
+
+  let firstTryCount = 0;
+  let questionCount = 0;
+
+  statValues.forEach((levelData) => {
+    if (!levelData || typeof levelData !== 'object') return;
+
+    const firstTry = Number(levelData.firstTryCorrectAnswers || 0);
+    firstTryCount += firstTry;
+
+    if (Array.isArray(levelData.attemptsPerQuestion)) {
+      questionCount += levelData.attemptsPerQuestion.length;
+    } else if (levelData.attemptsPerQuestion && typeof levelData.attemptsPerQuestion === 'object') {
+      questionCount += Object.values(levelData.attemptsPerQuestion).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    } else if (typeof levelData.correct === 'number' || typeof levelData.incorrect === 'number') {
+      questionCount += (Number(levelData.correct) || 0) + (Number(levelData.incorrect) || 0);
+    }
+  });
+
+  return questionCount > 0 ? Math.round((firstTryCount / questionCount) * 100) : 0;
+}
+
 async function renderPlayers() {
   const tbody = document.getElementById("playersTable");
   if (!tbody) return;
   tbody.innerHTML = "";
 
   const sortedPlayers = [...playersCache].sort((a, b) => {
-    if (currentSortKey === "time") {
-      return (a.stats?.time || 0) - (b.stats?.time || 0);
+    if (currentSortKey === "successRate") {
+      const aRate = getPlayerSuccessRate(a);
+      const bRate = getPlayerSuccessRate(b);
+      return bRate - aRate;
     }
     if (currentSortKey === "createdAt") {
       return new Date(b.createdAt) - new Date(a.createdAt);
@@ -484,14 +515,14 @@ async function setSort(key) {
 
 window.onload = () => {
   const sortScoreBtn = document.getElementById("sortScoreBtn");
-  const sortTimeBtn = document.getElementById("sortTimeBtn");
+  const sortSuccessBtn = document.getElementById("sortSuccessBtn");
   const sortCreatedBtn = document.getElementById("sortCreatedBtn");
 
   if (sortScoreBtn) {
     sortScoreBtn.addEventListener("click", () => setSort("score"));
   }
-  if (sortTimeBtn) {
-    sortTimeBtn.addEventListener("click", () => setSort("time"));
+  if (sortSuccessBtn) {
+    sortSuccessBtn.addEventListener("click", () => setSort("successRate"));
   }
   if (sortCreatedBtn) {
     sortCreatedBtn.addEventListener("click", () => setSort("createdAt"));

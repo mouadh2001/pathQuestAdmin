@@ -1,5 +1,21 @@
 const API_URL = "/api/admin";
 
+function showNotification(message, type = "error", duration = 4000) {
+  let notification = document.getElementById("notification");
+  if (!notification) {
+    notification = document.createElement("div");
+    notification.id = "notification";
+    document.body.appendChild(notification);
+  }
+
+  notification.textContent = message;
+  notification.className = `notification ${type} show`;
+
+  setTimeout(() => {
+    notification.classList.remove("show");
+  }, duration);
+}
+
 async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -17,11 +33,11 @@ async function login() {
       localStorage.setItem("adminToken", data.token);
       window.location.href = "dashboard.html";
     } else {
-      alert(data.message || "Login failed");
+      showNotification(data.message || "Login failed", "error");
     }
   } catch (err) {
     console.error(err);
-    alert("Server error");
+    showNotification("Server error", "error");
   }
 }
 
