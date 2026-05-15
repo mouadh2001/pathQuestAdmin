@@ -671,6 +671,9 @@ async function exportPlayerToExcel(player, historyData) {
 }
 window.createPlayer = createPlayer;
 window.deletePlayer = deletePlayer;
+window.requestPlayerDelete = requestPlayerDelete;
+window.confirmDeletePlayer = confirmDeletePlayer;
+window.closeDeleteModal = closeDeleteModal;
 
 function renderGlobalStats(players) {
   const container = document.getElementById("globalStats");
