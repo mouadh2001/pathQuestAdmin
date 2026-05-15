@@ -171,7 +171,7 @@ async function renderPlayers() {
       <td>${p.username}</td>
       <td>${p.email}</td>
       <td>${p.stats?.score ?? 0}</td>
-      <td>${p.stats?.time ?? 0}</td>
+      <td>${getPlayerSuccessRate(p)}%</td>
       <td>${new Date(p.createdAt).toLocaleString()}</td>
       <td>
         <button class="btn-danger btn-sm" onclick="requestPlayerDelete('${p._id}', '${p.username}')" title="Delete Player">Delete</button>
