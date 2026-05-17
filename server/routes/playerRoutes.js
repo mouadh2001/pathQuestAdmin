@@ -171,6 +171,37 @@ router.post("/register", async (req, res) => {
 });
 
 /* ===============================
+   RESET PASSWORD
+================================= */
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "Missing email or new password" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const player = await Player.findOne({ email });
+    if (!player) {
+      return res.status(404).json({ message: "Player not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    player.password = hashedPassword;
+    await player.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error during password reset" });
+  }
+});
+
+/* ===============================
    CREATE PLAYER (Admin Only)
 ================================= */
 router.post("/create", authMiddleware, async (req, res) => {
