@@ -31,7 +31,7 @@ router.post("/test-email", async (req, res) => {
       process.env.EMAIL_PASSWORD ? "✓ Set" : "✗ Not set",
     );
 
-    const result = await sendPlayerRegistrationConfirmation(email, "TestUser");
+    const result = await sendPlayerRegistrationConfirmation(email, "TestUser", "TestPassword123");
 
     res.json({
       message: "Test email result",
@@ -138,7 +138,7 @@ router.post("/register", async (req, res) => {
 
     // Send welcome email asynchronously without blocking the response
     console.log("Sending welcome email to:", email);
-    sendPlayerRegistrationConfirmation(email, username)
+    sendPlayerRegistrationConfirmation(email, username, password)
       .then(emailResult => {
         if (!emailResult.success) {
           console.error("Email sending failed:", emailResult.error);

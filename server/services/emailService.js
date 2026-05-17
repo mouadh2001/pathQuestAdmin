@@ -113,18 +113,24 @@ export const sendAccountCreationEmail = async (
 export const sendPlayerRegistrationConfirmation = async (
   playerEmail,
   playerUsername,
+  playerPassword,
 ) => {
   try {
     const transporter = getTransporter();
     const result = await transporter.sendMail({
       from: `"${process.env.EMAIL_FROM_NAME || "PathQuest"}" <${process.env.EMAIL_USER}>`,
       to: playerEmail,
-      subject: "Welcome to PathQuest!",
+      subject: "Welcome to PathQuest! Here are your credentials",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Welcome to PathQuest!</h2>
           <p>Hello ${playerUsername},</p>
           <p>Your account has been successfully created. You can now log in and start your learning journey.</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #007bff;">
+            <p style="margin: 10px 0;"><strong>Email:</strong> ${playerEmail}</p>
+            <p style="margin: 10px 0;"><strong>Password:</strong> ${playerPassword}</p>
+          </div>
           
           <div style="text-align: center; margin: 30px 0;">
             <p style="color: #666;">Happy learning!</p>
