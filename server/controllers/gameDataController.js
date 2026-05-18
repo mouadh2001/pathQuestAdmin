@@ -64,23 +64,16 @@ export const getPublicGameData = async (req, res) => {
   try {
     const allData = await GameData.find({});
     
-    // Reconstruct the LEVELS object shape expected by the game
+    // Reconstruct the LEVELS object shape with only editable fields
     const LEVELS = {};
     allData.forEach(levelData => {
       LEVELS[levelData.levelId] = {
         key: levelData.levelId,
-        title: levelData.title,
-        backgroundKey: levelData.backgroundKey,
-        isDeadlyFloor: levelData.isDeadlyFloor,
-        spawn: levelData.spawn,
         questionCount: levelData.questionCount,
         hint: levelData.hint,
         loupeLink: levelData.loupeLink,
         bonusInfo: levelData.bonusInfo,
         badgeUrl: levelData.badgeUrl,
-        platforms: levelData.platforms,
-        items: levelData.items,
-        enemies: levelData.enemies,
         questionData: levelData.questions // Map to plain object
       };
     });
@@ -105,18 +98,11 @@ export const pushGameData = async (req, res) => {
       existingData = new GameData({ levelId: level });
     }
 
-    existingData.title = payload.title;
-    existingData.backgroundKey = payload.backgroundKey;
-    existingData.isDeadlyFloor = payload.isDeadlyFloor || false;
-    existingData.spawn = payload.spawn;
     existingData.questionCount = payload.questionCount;
     existingData.hint = payload.hint;
     existingData.loupeLink = payload.loupeLink || "";
     existingData.bonusInfo = payload.bonusInfo || [];
     existingData.badgeUrl = payload.badgeUrl || "";
-    existingData.platforms = payload.platforms;
-    existingData.items = payload.items;
-    existingData.enemies = payload.enemies;
     existingData.questions = payload.questions;
 
     await existingData.save();
