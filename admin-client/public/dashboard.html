@@ -54,7 +54,7 @@
         <div class="form-card">
           <div class="flex-between mb-15">
             <h2>Game Data Management</h2>
-            <div class="level-selector">
+            <div class="level-selector" style="display: flex; gap: 10px; align-items: center;">
               <label for="levelSelect"><strong>Select Level:</strong></label>
               <select id="levelSelect" onchange="loadGameData()">
                 <option value="level1">Level 1</option>
@@ -63,9 +63,13 @@
                 <option value="level4">Level 4</option>
                 <option value="level5">Level 5</option>
               </select>
+              <button onclick="syncGameDataFromFiles()" class="btn-secondary" style="background-color: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px; display: inline; vertical-align: middle; margin-right: 4px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Sync from Local Files
+              </button>
             </div>
           </div>
-          <p class="subtitle">Edit bonus info, links, and questions for the selected level.</p>
+          <p class="subtitle">Edit bonus info, links, and questions for the selected level. Or sync latest hardcoded files.</p>
         </div>
 
         <div id="gameDataEditor" class="hidden">

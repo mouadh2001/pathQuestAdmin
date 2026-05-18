@@ -426,9 +426,46 @@ async function saveGameData() {
   }
 }
 
+async function syncGameDataFromFiles() {
+  const level = document.getElementById('levelSelect').value;
+  if (!confirm(`Are you sure you want to overwrite the database data for ${level} with the local JS files? All unsaved manual changes in the DB will be lost.`)) {
+    return;
+  }
+
+  const loader = document.getElementById('gameDataLoading');
+  const editor = document.getElementById('gameDataEditor');
+  editor.classList.add('hidden');
+  loader.classList.remove('hidden');
+
+  try {
+    const response = await fetch(`/api/admin/gamedata/${level}/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${localStorage.getItem('adminToken')}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(errorBody?.message || `Failed to sync data for ${level}`);
+    }
+
+    showNotification(`Game data for ${level} synced from files successfully!`, 'success');
+    // Reload the newly synced data
+    await loadGameData();
+  } catch (error) {
+    console.error(error);
+    showNotification(error.message, 'error');
+    loader.classList.add('hidden');
+    editor.classList.remove('hidden');
+  }
+}
+
 window.loadGameData = loadGameData;
 window.saveLevelConfig = saveGameData;
 window.saveGameData = saveGameData;
+window.syncGameDataFromFiles = syncGameDataFromFiles;
 
 function showNotification(message, type = 'info') {
   let toast = document.getElementById('notification');

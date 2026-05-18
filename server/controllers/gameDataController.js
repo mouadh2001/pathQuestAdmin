@@ -162,3 +162,58 @@ export const getPublicGameData = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch public game data", error: error.message });
   }
 };
+
+/* --- Sync Route for Admin to Force Push Local Files to DB --- */
+export const syncGameData = async (req, res) => {
+  const { level } = req.params;
+  try {
+    console.log(`Syncing data for ${level} from local files to MongoDB...`);
+    const levelConfigsPath = path.join(gameDataPath, 'levelConfigs.js');
+    const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
+
+    if (!fs.existsSync(levelConfigsPath) || !fs.existsSync(questionsPath)) {
+      return res.status(404).json({ message: "Local files not found for this level." });
+    }
+
+    const timestamp = Date.now();
+    const configUrl = `${pathToFileURL(levelConfigsPath).href}?update=${timestamp}`;
+    const questionsUrl = `${pathToFileURL(questionsPath).href}?update=${timestamp}`;
+    const configModule = await import(configUrl);
+    const questionsModule = await import(questionsUrl);
+
+    const levelConfigKey = level.trim();
+    const levelConfig = configModule.LEVELS[levelConfigKey] || configModule.LEVELS[levelConfigKey + '  '];
+    const questionsObjName = `${levelConfigKey}Questions`;
+    const questions = questionsModule[questionsObjName];
+
+    if (!levelConfig || !questions) {
+      return res.status(400).json({ message: "Could not parse level data from files." });
+    }
+
+    let existingData = await GameData.findOne({ levelId: level });
+    if (!existingData) {
+      existingData = new GameData({ levelId: level });
+    }
+
+    existingData.title = levelConfig.title;
+    existingData.backgroundKey = levelConfig.backgroundKey;
+    existingData.isDeadlyFloor = levelConfig.isDeadlyFloor || false;
+    existingData.spawn = levelConfig.spawn;
+    existingData.questionCount = levelConfig.questionCount;
+    existingData.hint = levelConfig.hint;
+    existingData.loupeLink = levelConfig.loupeLink || "";
+    existingData.bonusInfo = levelConfig.bonusInfo || [];
+    existingData.badgeUrl = levelConfig.badgeUrl || "";
+    existingData.platforms = levelConfig.platforms;
+    existingData.items = levelConfig.items;
+    existingData.enemies = levelConfig.enemies;
+    existingData.questions = questions;
+
+    await existingData.save();
+
+    res.json({ message: "Game data synced from files successfully!", data: existingData });
+  } catch (error) {
+    console.error(`Error syncing ${level}:`, error);
+    res.status(500).json({ message: "Failed to sync game data", error: error.message });
+  }
+};
