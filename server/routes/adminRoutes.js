@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import Admin from "../models/admin.js";
 import Player from "../models/player.js";
 import PlayerStat from "../models/playerStat.js";
-import { getGameData, updateGameData, syncGameData } from "../controllers/gameDataController.js";
+import { getGameData, updateGameData, pushGameData } from "../controllers/gameDataController.js";
 
 const router = express.Router();
 
@@ -50,6 +50,6 @@ router.delete("/players/:id", async (req, res) => {
 /* Game Data Management */
 router.get("/gamedata/:level", getGameData);
 router.put("/gamedata/:level", updateGameData);
-router.post("/gamedata/:level/sync", syncGameData);
+router.post("/gamedata/:level/push", pushGameData);
 
 export default router;

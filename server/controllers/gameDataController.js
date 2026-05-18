@@ -6,81 +6,14 @@ import GameData from '../models/gameData.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Try multiple possible paths to locate the static game data robustly
-let gameDataPath = path.resolve(__dirname, '../../../Patho Quest final/src/data');
-
-if (!fs.existsSync(gameDataPath)) {
-  // Fallback if running from pathQuestAdmin root
-  gameDataPath = path.resolve(process.cwd(), '../Patho Quest final/src/data');
-}
-if (!fs.existsSync(gameDataPath)) {
-  // Extreme fallback just in case
-  gameDataPath = 'c:\\Users\\elmou\\VirtualBox VMs\\sf_shared_folder\\Patho Quest final\\src\\data';
-}
-
-// Helper function to seed data from static files to MongoDB if not exists
-const seedGameDataIfNeeded = async (level) => {
-  try {
-    let existingData = await GameData.findOne({ levelId: level });
-    if (!existingData) {
-      console.log(`Seeding data for ${level} to MongoDB...`);
-      const levelConfigsPath = path.join(gameDataPath, 'levelConfigs.js');
-      const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
-
-      if (fs.existsSync(levelConfigsPath) && fs.existsSync(questionsPath)) {
-        const timestamp = Date.now();
-        const configUrl = `${pathToFileURL(levelConfigsPath).href}?update=${timestamp}`;
-        const questionsUrl = `${pathToFileURL(questionsPath).href}?update=${timestamp}`;
-        const configModule = await import(configUrl);
-        const questionsModule = await import(questionsUrl);
-
-        const levelConfigKey = level.trim();
-        const levelConfig = configModule.LEVELS[levelConfigKey] || configModule.LEVELS[levelConfigKey + '  '];
-        const questionsObjName = `${levelConfigKey}Questions`;
-        const questions = questionsModule[questionsObjName];
-
-        if (levelConfig) {
-          const newData = new GameData({
-            levelId: level,
-            title: levelConfig.title,
-            backgroundKey: levelConfig.backgroundKey,
-            isDeadlyFloor: levelConfig.isDeadlyFloor || false,
-            spawn: levelConfig.spawn,
-            questionCount: levelConfig.questionCount,
-            hint: levelConfig.hint,
-            loupeLink: levelConfig.loupeLink || "",
-            bonusInfo: levelConfig.bonusInfo || [],
-            badgeUrl: levelConfig.badgeUrl || "",
-            platforms: levelConfig.platforms,
-            items: levelConfig.items,
-            enemies: levelConfig.enemies,
-            questions: questions
-          });
-          await newData.save();
-          return newData;
-        }
-      }
-    }
-    return existingData;
-  } catch (error) {
-    console.error(`Error seeding ${level}:`, error);
-    return null;
-  }
-};
-
 export const getGameData = async (req, res) => {
   const { level } = req.params;
   
   try {
     let data = await GameData.findOne({ levelId: level });
     
-    // If not found in DB, try to seed from static files
     if (!data) {
-      data = await seedGameDataIfNeeded(level);
-    }
-
-    if (!data) {
-      return res.status(404).json({ message: "Game data not found for this level" });
+      return res.status(404).json({ message: "Game data not found for this level in the database." });
     }
 
     res.json({
@@ -106,10 +39,7 @@ export const updateGameData = async (req, res) => {
     let data = await GameData.findOne({ levelId: level });
     
     if (!data) {
-      data = await seedGameDataIfNeeded(level);
-      if (!data) {
-        return res.status(404).json({ message: "Game data not found for this level" });
-      }
+      return res.status(404).json({ message: "Game data not found for this level" });
     }
 
     data.hint = hint;
@@ -132,16 +62,6 @@ export const updateGameData = async (req, res) => {
 /* --- Public Route for Game Client --- */
 export const getPublicGameData = async (req, res) => {
   try {
-    // If the DB is completely empty, we might want to seed all 5 levels 
-    // to avoid the game breaking on first load before admin touches it.
-    const count = await GameData.countDocuments();
-    if (count === 0) {
-      const levels = ['level1', 'level2', 'level3', 'level4', 'level5'];
-      for (let l of levels) {
-        await seedGameDataIfNeeded(l);
-      }
-    }
-
     const allData = await GameData.find({});
     
     // Reconstruct the LEVELS object shape expected by the game
@@ -172,57 +92,38 @@ export const getPublicGameData = async (req, res) => {
   }
 };
 
-/* --- Sync Route for Admin to Force Push Local Files to DB --- */
-export const syncGameData = async (req, res) => {
+/* --- Push Route for Standalone Script to Force Push Full Data to DB --- */
+export const pushGameData = async (req, res) => {
   const { level } = req.params;
+  const payload = req.body;
+
   try {
-    console.log(`Syncing data for ${level} from local files to MongoDB...`);
-    const levelConfigsPath = path.join(gameDataPath, 'levelConfigs.js');
-    const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
-
-    if (!fs.existsSync(levelConfigsPath) || !fs.existsSync(questionsPath)) {
-      return res.status(404).json({ message: `Local files not found. Looked for:\n1) ${levelConfigsPath}\n2) ${questionsPath}` });
-    }
-
-    const timestamp = Date.now();
-    const configUrl = `${pathToFileURL(levelConfigsPath).href}?update=${timestamp}`;
-    const questionsUrl = `${pathToFileURL(questionsPath).href}?update=${timestamp}`;
-    const configModule = await import(configUrl);
-    const questionsModule = await import(questionsUrl);
-
-    const levelConfigKey = level.trim();
-    const levelConfig = configModule.LEVELS[levelConfigKey] || configModule.LEVELS[levelConfigKey + '  '];
-    const questionsObjName = `${levelConfigKey}Questions`;
-    const questions = questionsModule[questionsObjName];
-
-    if (!levelConfig || !questions) {
-      return res.status(400).json({ message: "Could not parse level data from files." });
-    }
-
+    console.log(`Pushing data for ${level} from script to MongoDB...`);
+    
     let existingData = await GameData.findOne({ levelId: level });
     if (!existingData) {
       existingData = new GameData({ levelId: level });
     }
 
-    existingData.title = levelConfig.title;
-    existingData.backgroundKey = levelConfig.backgroundKey;
-    existingData.isDeadlyFloor = levelConfig.isDeadlyFloor || false;
-    existingData.spawn = levelConfig.spawn;
-    existingData.questionCount = levelConfig.questionCount;
-    existingData.hint = levelConfig.hint;
-    existingData.loupeLink = levelConfig.loupeLink || "";
-    existingData.bonusInfo = levelConfig.bonusInfo || [];
-    existingData.badgeUrl = levelConfig.badgeUrl || "";
-    existingData.platforms = levelConfig.platforms;
-    existingData.items = levelConfig.items;
-    existingData.enemies = levelConfig.enemies;
-    existingData.questions = questions;
+    existingData.title = payload.title;
+    existingData.backgroundKey = payload.backgroundKey;
+    existingData.isDeadlyFloor = payload.isDeadlyFloor || false;
+    existingData.spawn = payload.spawn;
+    existingData.questionCount = payload.questionCount;
+    existingData.hint = payload.hint;
+    existingData.loupeLink = payload.loupeLink || "";
+    existingData.bonusInfo = payload.bonusInfo || [];
+    existingData.badgeUrl = payload.badgeUrl || "";
+    existingData.platforms = payload.platforms;
+    existingData.items = payload.items;
+    existingData.enemies = payload.enemies;
+    existingData.questions = payload.questions;
 
     await existingData.save();
 
-    res.json({ message: "Game data synced from files successfully!", data: existingData });
+    res.json({ message: "Game data pushed successfully!", data: existingData });
   } catch (error) {
-    console.error(`Error syncing ${level}:`, error);
-    res.status(500).json({ message: "Failed to sync game data", error: error.message });
+    console.error(`Error pushing ${level}:`, error);
+    res.status(500).json({ message: "Failed to push game data", error: error.message });
   }
 };
