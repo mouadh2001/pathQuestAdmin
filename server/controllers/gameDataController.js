@@ -6,8 +6,17 @@ import GameData from '../models/gameData.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Path to the original static game data
-const gameDataPath = path.resolve(__dirname, '../../../Patho Quest final/src/data');
+// Try multiple possible paths to locate the static game data robustly
+let gameDataPath = path.resolve(__dirname, '../../../Patho Quest final/src/data');
+
+if (!fs.existsSync(gameDataPath)) {
+  // Fallback if running from pathQuestAdmin root
+  gameDataPath = path.resolve(process.cwd(), '../Patho Quest final/src/data');
+}
+if (!fs.existsSync(gameDataPath)) {
+  // Extreme fallback just in case
+  gameDataPath = 'c:\\Users\\elmou\\VirtualBox VMs\\sf_shared_folder\\Patho Quest final\\src\\data';
+}
 
 // Helper function to seed data from static files to MongoDB if not exists
 const seedGameDataIfNeeded = async (level) => {
@@ -172,7 +181,7 @@ export const syncGameData = async (req, res) => {
     const questionsPath = path.join(gameDataPath, `${level}Questions.js`);
 
     if (!fs.existsSync(levelConfigsPath) || !fs.existsSync(questionsPath)) {
-      return res.status(404).json({ message: "Local files not found for this level." });
+      return res.status(404).json({ message: `Local files not found. Looked for:\n1) ${levelConfigsPath}\n2) ${questionsPath}` });
     }
 
     const timestamp = Date.now();
