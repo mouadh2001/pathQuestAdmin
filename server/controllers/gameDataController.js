@@ -80,9 +80,20 @@ export const getPublicGameData = async (req, res) => {
       const cleanQuestions = {};
 
       // Process questions to reduce image size
-      if (levelData.questions && typeof levelData.questions === "object") {
-        for (const qKey in levelData.questions) {
-          const q = levelData.questions[qKey];
+      let questionsObj = {};
+      if (levelData.questions) {
+        if (typeof levelData.questions.toJSON === "function") {
+          questionsObj = levelData.questions.toJSON();
+        } else if (levelData.questions instanceof Map) {
+          questionsObj = Object.fromEntries(levelData.questions);
+        } else {
+          questionsObj = levelData.questions;
+        }
+      }
+
+      if (questionsObj && typeof questionsObj === "object") {
+        for (const qKey in questionsObj) {
+          const q = questionsObj[qKey];
           cleanQuestions[qKey] = {
             q: q.q || "",
             a: Array.isArray(q.a) ? q.a : [],
