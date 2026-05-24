@@ -3,6 +3,7 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import path from "path";
 import { fileURLToPath } from "url";
 import connectDB from "./server/config/db.js";
@@ -18,6 +19,9 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
+// Enable compression for faster API responses
+app.use(compression({ level: 9 }));
+
 app.use(
   cors({
     origin: "*", // allow all domains OR list your Vercel URL explicitly
@@ -25,7 +29,8 @@ app.use(
     credentials: true,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb" }));
 
 app.use(express.static(path.join(__dirname, "admin-client/public")));
 

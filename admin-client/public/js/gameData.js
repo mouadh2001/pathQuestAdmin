@@ -437,6 +437,9 @@ async function saveGameData() {
   } catch (error) {
     console.error(error);
     showNotification(error.message, 'error');
+  }
+}
+
 window.loadGameData = loadGameData;
 window.saveLevelConfig = saveGameData;
 window.saveGameData = saveGameData;
