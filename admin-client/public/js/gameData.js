@@ -3,6 +3,15 @@ let currentQuestions = {};
 let currentBonusInfo = [];
 let currentQuestionCount = 1;
 let currentBadgeDataUrl = "";
+let renderDebounceTimer = null;
+
+// Debounce re-render to prevent excessive DOM updates
+function debouncedRenderQuestions() {
+  clearTimeout(renderDebounceTimer);
+  renderDebounceTimer = setTimeout(() => {
+    renderQuestions();
+  }, 100);
+}
 
 export async function loadGameData() {
   const level = document.getElementById('levelSelect').value;
@@ -140,10 +149,7 @@ function renderQuestions() {
 
     const qImagesInput = qBody.querySelector(`#qImages-${qKey}`);
     qImagesInput.addEventListener('change', (event) => handleQuestionImagesUpload(qKey, event.target.files));
-    renderImagePreview(qBody.querySelector(`#qImagesPreview-${qKey}`), qData.imgs, (imageIndex) => {
-      removeQuestionImage(qKey, imageIndex);
-      renderQuestions();
-    });
+    renderImagePreview(qBody.querySelector(`#qImagesPreview-${qKey}`), qData.imgs, null);
 
     const optsContainer = qBody.querySelector('.options-container');
     qData.a.forEach((ans, aIndex) => {
@@ -184,10 +190,7 @@ function renderQuestions() {
 
       const feedbackImagesInput = optItem.querySelector(`#feedbackImages-${qKey}-${aIndex}`);
       feedbackImagesInput.addEventListener('change', (event) => handleFeedbackImagesUpload(qKey, aIndex, event.target.files));
-      renderImagePreview(optItem.querySelector(`#feedbackImagesPreview-${qKey}-${aIndex}`), feedback.imgs, (imageIndex) => {
-        removeFeedbackImage(qKey, aIndex, imageIndex);
-        renderQuestions();
-      });
+      renderImagePreview(optItem.querySelector(`#feedbackImagesPreview-${qKey}-${aIndex}`), feedback.imgs, null);
     });
 
     qCard.appendChild(qHeader);
@@ -231,7 +234,12 @@ function renderImagePreview(container, images, onRemove) {
     removeBtn.className = 'btn-remove-image';
     removeBtn.innerText = '×';
     removeBtn.title = 'Remove image';
-    removeBtn.addEventListener('click', () => onRemove(imageIndex));
+    removeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Just remove locally - don't trigger full re-render
+      images.splice(imageIndex, 1);
+      renderImagePreview(container, images, onRemove);
+    });
 
     previewCard.appendChild(previewImg);
     previewCard.appendChild(removeBtn);
@@ -244,7 +252,7 @@ window.updateQuestionCount = (value) => {
   currentQuestionCount = count;
   document.getElementById('levelQuestionCount').value = currentQuestionCount;
   currentQuestions = normalizeQuestions(currentQuestions, currentQuestionCount);
-  renderQuestions();
+  debouncedRenderQuestions();
 };
 
 window.handleLevelBadgeUpload = async (event) => {
@@ -272,7 +280,7 @@ window.handleQuestionImagesUpload = async (qKey, files) => {
   if (!files || files.length === 0) return;
   currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
   currentQuestions[qKey].imgs = await readFilesAsDataUrls(files);
-  renderQuestions();
+  debouncedRenderQuestions();
 };
 
 window.handleFeedbackImagesUpload = async (qKey, answerIndex, files) => {
@@ -283,7 +291,7 @@ window.handleFeedbackImagesUpload = async (qKey, answerIndex, files) => {
     currentQuestions[qKey].feedbacks[answerIndex] = { text: '', imgs: [] };
   }
   currentQuestions[qKey].feedbacks[answerIndex].imgs = await readFilesAsDataUrls(files);
-  renderQuestions();
+  debouncedRenderQuestions();
 };
 
 window.removeQuestionImage = (qKey, imageIndex) => {
@@ -331,7 +339,7 @@ window.toggleCorrectAnswer = (qKey, aIndex, isChecked) => {
 
 window.addBonusInfoPage = () => {
   currentBonusInfo.push({ text: '', image: '' });
-  renderBonusInfo();
+  debouncedRenderBonusInfo();
 };
 
 window.updateBonusInfoText = (index, val) => {
@@ -345,12 +353,12 @@ window.handleBonusInfoImageUpload = async (index, event) => {
   const imageUrl = await readFileAsDataUrl(file);
   currentBonusInfo[index] = currentBonusInfo[index] || { text: '', image: '' };
   currentBonusInfo[index].image = imageUrl;
-  renderBonusInfo();
+  debouncedRenderBonusInfo();
 };
 
 window.removeBonusInfoPage = (index) => {
   currentBonusInfo.splice(index, 1);
-  renderBonusInfo();
+  debouncedRenderBonusInfo();
 };
 
 function renderBonusInfo() {
@@ -385,11 +393,17 @@ function renderBonusInfo() {
     container.appendChild(card);
     document.getElementById(`bonusText-${index}`).addEventListener('change', (event) => updateBonusInfoText(index, event.target.value));
     document.getElementById(`bonusImage-${index}`).addEventListener('change', (event) => handleBonusInfoImageUpload(index, event));
-    renderImagePreview(document.getElementById(`bonusImagePreview-${index}`), page.image ? [page.image] : [], () => {
-      currentBonusInfo[index].image = '';
-      renderBonusInfo();
-    });
+    renderImagePreview(document.getElementById(`bonusImagePreview-${index}`), page.image ? [page.image] : [], null);
   });
+}
+
+// Debounce bonus info render
+let bonusDebounceTimer = null;
+function debouncedRenderBonusInfo() {
+  clearTimeout(bonusDebounceTimer);
+  bonusDebounceTimer = setTimeout(() => {
+    renderBonusInfo();
+  }, 100);
 }
 
 async function saveGameData() {
