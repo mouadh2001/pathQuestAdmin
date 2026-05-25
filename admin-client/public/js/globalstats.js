@@ -145,50 +145,27 @@ export async function exportGlobalExcel() {
   }
 
   try {
-    const { Workbook } = window.ExcelJS;
-    const workbook = new Workbook();
-    const worksheet = workbook.addWorksheet("Global Stats");
-
-    // Add headers
-    worksheet.columns = [
-      { header: "Metric", key: "metric", width: 25 },
-      { header: "Value", key: "value", width: 15 },
-    ];
-
-    // Add data
-    worksheet.addRows([
-      { metric: "Total Players", value: globalStatsData.totalPlayers },
-      { metric: "Average Score", value: globalStatsData.averageScore },
-      {
-        metric: "Average Success Rate (%)",
-        value: globalStatsData.averageSuccessRate,
+    // Download CSV file
+    const response = await fetch("/api/admin/export/globalstats", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
       },
-      {
-        metric: "Total Questions Answered",
-        value: globalStatsData.totalQuestionsAnswered,
-      },
-    ]);
-
-    // Style header row
-    worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-    worksheet.getRow(1).fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF1E293B" },
-    };
-
-    // Save file
-    await workbook.xlsx.writeBuffer().then((buffer) => {
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `global-stats-${new Date().getTime()}.xlsx`;
-      link.click();
-      window.URL.revokeObjectURL(url);
     });
+
+    if (!response.ok) {
+      throw new Error("Failed to export global statistics");
+    }
+
+    // Get the CSV content
+    const csvContent = await response.text();
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `global-stats-${new Date().getTime()}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
 
     showNotification("Global stats exported successfully!", "success");
   } catch (error) {

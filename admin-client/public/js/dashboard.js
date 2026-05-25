@@ -89,12 +89,16 @@ async function loadPlayers() {
 }
 
 function isPlayerUsingNewStats(player) {
-  if (!player || !player.levelStats || Object.keys(player.levelStats).length === 0) {
+  if (
+    !player ||
+    !player.levelStats ||
+    Object.keys(player.levelStats).length === 0
+  ) {
     return false;
   }
 
-  return Object.values(player.levelStats).every((levelData) =>
-    levelData && levelData.attemptsPerQuestion !== undefined,
+  return Object.values(player.levelStats).every(
+    (levelData) => levelData && levelData.attemptsPerQuestion !== undefined,
   );
 }
 
@@ -126,21 +130,33 @@ function getPlayerSuccessRate(player) {
   let questionCount = 0;
 
   statValues.forEach((levelData) => {
-    if (!levelData || typeof levelData !== 'object') return;
+    if (!levelData || typeof levelData !== "object") return;
 
     const firstTry = Number(levelData.firstTryCorrectAnswers || 0);
     firstTryCount += firstTry;
 
     if (Array.isArray(levelData.attemptsPerQuestion)) {
       questionCount += levelData.attemptsPerQuestion.length;
-    } else if (levelData.attemptsPerQuestion && typeof levelData.attemptsPerQuestion === 'object') {
-      questionCount += Object.values(levelData.attemptsPerQuestion).reduce((sum, value) => sum + (Number(value) || 0), 0);
-    } else if (typeof levelData.correct === 'number' || typeof levelData.incorrect === 'number') {
-      questionCount += (Number(levelData.correct) || 0) + (Number(levelData.incorrect) || 0);
+    } else if (
+      levelData.attemptsPerQuestion &&
+      typeof levelData.attemptsPerQuestion === "object"
+    ) {
+      questionCount += Object.values(levelData.attemptsPerQuestion).reduce(
+        (sum, value) => sum + (Number(value) || 0),
+        0,
+      );
+    } else if (
+      typeof levelData.correct === "number" ||
+      typeof levelData.incorrect === "number"
+    ) {
+      questionCount +=
+        (Number(levelData.correct) || 0) + (Number(levelData.incorrect) || 0);
     }
   });
 
-  return questionCount > 0 ? Math.round((firstTryCount / questionCount) * 100) : 0;
+  return questionCount > 0
+    ? Math.round((firstTryCount / questionCount) * 100)
+    : 0;
 }
 
 async function renderPlayers() {
@@ -201,24 +217,24 @@ let pendingDeleteUsername = null;
 function requestPlayerDelete(playerId, username) {
   pendingDeletePlayerId = playerId;
   pendingDeleteUsername = username;
-  const modal = document.getElementById('deleteConfirmModal');
-  const message = document.getElementById('deleteConfirmMessage');
+  const modal = document.getElementById("deleteConfirmModal");
+  const message = document.getElementById("deleteConfirmMessage");
 
   if (message) {
     message.textContent = `Are you sure you want to delete player "${username}"? This action cannot be undone.`;
   }
 
   if (modal) {
-    modal.classList.remove('hidden');
+    modal.classList.remove("hidden");
   }
 }
 
 function closeDeleteModal() {
   pendingDeletePlayerId = null;
   pendingDeleteUsername = null;
-  const modal = document.getElementById('deleteConfirmModal');
+  const modal = document.getElementById("deleteConfirmModal");
   if (modal) {
-    modal.classList.add('hidden');
+    modal.classList.add("hidden");
   }
 }
 
@@ -235,15 +251,15 @@ async function confirmDeletePlayer() {
   try {
     const token = getToken();
     const response = await fetch(`/api/admin/players/${playerId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Authorization': token,
+        Authorization: token,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || 'Failed to delete player');
+      throw new Error(errorData?.message || "Failed to delete player");
     }
 
     playersCache = playersCache.filter((p) => p._id !== playerId);
@@ -254,10 +270,10 @@ async function confirmDeletePlayer() {
 
     await renderPlayers();
 
-    showNotification(`Player "${username}" deleted successfully`, 'success');
+    showNotification(`Player "${username}" deleted successfully`, "success");
   } catch (error) {
-    console.error('Error deleting player:', error);
-    showNotification('Failed to delete player: ' + error.message, 'error');
+    console.error("Error deleting player:", error);
+    showNotification("Failed to delete player: " + error.message, "error");
   }
 }
 
@@ -343,7 +359,8 @@ async function renderPlayerDetails(player) {
       }
 
       newFormatLevelsFound = true;
-      const totalQuestions = (levelData.correct || 0) + (levelData.incorrect || 0);
+      const totalQuestions =
+        (levelData.correct || 0) + (levelData.incorrect || 0);
       const firstTryCount = levelData.firstTryCorrectAnswers || 0;
       globalFirstTryCount += firstTryCount;
       globalQuestionsAnswered += totalQuestions;
@@ -354,15 +371,19 @@ async function renderPlayerDetails(player) {
           : 0;
 
       const timesPlayed = levelChartData[levelKey]?.length || 0;
-      
+
       // Calculate best performance for this level
-      const levelHistoryEntries = newFormatHistoryData.filter(h => h.levelKey === levelKey);
+      const levelHistoryEntries = newFormatHistoryData.filter(
+        (h) => h.levelKey === levelKey,
+      );
       let bestPerformance = null;
       let lastAttemptBadgeLabel = "None";
       let bestPerformanceBadgeLabel = "None";
       if (levelHistoryEntries.length > 0) {
         bestPerformance = levelHistoryEntries.reduce((best, current) => {
-          return (current.levelScore || 0) > (best.levelScore || 0) ? current : best;
+          return (current.levelScore || 0) > (best.levelScore || 0)
+            ? current
+            : best;
         });
 
         const lastAttempt = levelHistoryEntries
@@ -375,8 +396,9 @@ async function renderPlayerDetails(player) {
           getRankTypeFromBadge(bestPerformance?.badges?.rankingBadge),
         );
       }
-      
-      const bestPerformanceHTML = bestPerformance ? `
+
+      const bestPerformanceHTML = bestPerformance
+        ? `
         <div style="background: #f0fdf4; padding: 10px; border-radius: 6px; flex: 1; min-width: 200px;">
           <h4 style="margin: 0 0 5px 0; color: #15803d;">Best Performance</h4>
           <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">
@@ -386,8 +408,9 @@ async function renderPlayerDetails(player) {
             <li>Best badge earned: <strong>${bestPerformanceBadgeLabel}</strong></li>
           </ul>
         </div>
-      ` : '';
-      
+      `
+        : "";
+
       const levelChartHTML = levelChartData[levelKey]
         ? `
             <div style="margin-top: 15px;">
@@ -402,7 +425,7 @@ async function renderPlayerDetails(player) {
               </div>
             </div>
           `
-        : '';
+        : "";
 
       levelStatsHtml += `
         <details class="level-details">
@@ -642,9 +665,7 @@ async function exportPlayerToExcel(player, historyData) {
     const totalQ = (h.correctAnswers || 0) + (h.incorrectAnswers || 0);
     const firstTry = h.firstTryCorrectAnswers || 0;
     const successRate =
-      totalQ > 0
-        ? ((firstTry / totalQ) * 100).toFixed(1) + "%"
-        : "0%";
+      totalQ > 0 ? ((firstTry / totalQ) * 100).toFixed(1) + "%" : "0%";
 
     ws2.addRow({
       date: new Date(h.pushedAt).toLocaleString(),
@@ -674,6 +695,7 @@ window.deletePlayer = deletePlayer;
 window.requestPlayerDelete = requestPlayerDelete;
 window.confirmDeletePlayer = confirmDeletePlayer;
 window.closeDeleteModal = closeDeleteModal;
+window.exportPlayersStatsCSV = exportPlayersStatsCSV;
 
 function renderGlobalStats(players) {
   const container = document.getElementById("globalStats");
@@ -719,7 +741,9 @@ function renderGlobalStats(players) {
         levelAggregates[levelKey].totalTime += lStats.time || 0;
 
         if (lStats.attemptsPerQuestion) {
-          for (const [qId, attempts] of Object.entries(lStats.attemptsPerQuestion)) {
+          for (const [qId, attempts] of Object.entries(
+            lStats.attemptsPerQuestion,
+          )) {
             if (!levelAggregates[levelKey].questions[qId]) {
               levelAggregates[levelKey].questions[qId] = {
                 attemptedBy: 0,
@@ -1157,7 +1181,9 @@ async function exportGlobalExcel() {
         levelAggs[levelKey].totalTime +=
           lStats.time || lStats.metrics?.sessionDuration || 0;
         if (lStats.attemptsPerQuestion) {
-          for (const [qId, attempts] of Object.entries(lStats.attemptsPerQuestion)) {
+          for (const [qId, attempts] of Object.entries(
+            lStats.attemptsPerQuestion,
+          )) {
             if (!levelAggs[levelKey].questions[qId]) {
               levelAggs[levelKey].questions[qId] = {
                 attemptedBy: 0,

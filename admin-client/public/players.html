@@ -84,7 +84,12 @@
         </div>
 
         <div class="card">
-          <h2>Players List</h2>
+          <div class="flex-between mb-15">
+            <h2 style="margin: 0">Players List</h2>
+            <button onclick="exportPlayersStatsCSV()" class="btn-success">
+              📥 Export Players (CSV)
+            </button>
+          </div>
           <div class="players-controls">
             <span>Sort by:</span>
             <button id="sortScoreBtn" type="button" class="btn-secondary">

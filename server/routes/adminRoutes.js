@@ -9,6 +9,12 @@ import {
   updateGameData,
   pushGameData,
 } from "../controllers/gameDataController.js";
+import {
+  getGlobalStats,
+  exportGlobalStatsCSV,
+  exportPlayersStatsCSV,
+  getPlayersStats,
+} from "../controllers/statsController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -58,5 +64,15 @@ router.delete("/players/:id", async (req, res) => {
 router.get("/gamedata/:level", authMiddleware, getGameData);
 router.put("/gamedata/:level", authMiddleware, updateGameData);
 router.post("/gamedata/:level/push", authMiddleware, pushGameData);
+
+/* Global Statistics */
+router.get("/globalstats", authMiddleware, getGlobalStats);
+
+/* Player Statistics */
+router.get("/players/stats", authMiddleware, getPlayersStats);
+
+/* Export Routes */
+router.get("/export/globalstats", authMiddleware, exportGlobalStatsCSV);
+router.get("/export/players", authMiddleware, exportPlayersStatsCSV);
 
 export default router;
