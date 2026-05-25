@@ -80,7 +80,7 @@ function normalizeQuestion(source = {}) {
   const feedbacks = Array.isArray(source.feedbacks) ? source.feedbacks.slice() : [];
 
   while (feedbacks.length < answers.length) {
-    feedbacks.push({ text: '', imgs: [] });
+    feedbacks.push({ text: '', imgs: [], audio: '', lyricsTitle: '', lyrics: '' });
   }
 
   return {
@@ -91,6 +91,9 @@ function normalizeQuestion(source = {}) {
     feedbacks: feedbacks.map((item) => ({
       text: item?.text || '',
       imgs: Array.isArray(item?.imgs) ? item.imgs : [],
+      audio: item?.audio || '',
+      lyricsTitle: item?.lyricsTitle || '',
+      lyrics: item?.lyrics || '',
     })),
   };
 }
@@ -101,7 +104,7 @@ function createEmptyQuestion() {
     imgs: [],
     a: ['', '', '', ''],
     c: [0],
-    feedbacks: [{ text: '', imgs: [] }],
+    feedbacks: [{ text: '', imgs: [], audio: '', lyricsTitle: '', lyrics: '' }],
   };
 }
 
@@ -225,9 +228,14 @@ function renderImagePreview(container, images, onRemove) {
     previewCard.className = 'image-chip';
 
     const previewImg = document.createElement('img');
-    previewImg.src = imgSrc;
+    const resolvedSrc = typeof imgSrc === 'string' ? imgSrc : (imgSrc && (imgSrc.src || imgSrc.path) ? (imgSrc.src || imgSrc.path) : '');
+    previewImg.src = resolvedSrc;
     previewImg.alt = `Image ${imageIndex + 1}`;
     previewImg.loading = 'lazy';
+    
+    if (typeof imgSrc === 'object' && imgSrc !== null && imgSrc.title) {
+      previewImg.title = imgSrc.title;
+    }
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';

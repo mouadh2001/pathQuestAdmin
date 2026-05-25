@@ -103,6 +103,9 @@ export const getPublicGameData = async (req, res) => {
               ? q.feedbacks.map((fb) => ({
                   text: fb.text || "",
                   imgs: Array.isArray(fb.imgs) ? fb.imgs : [],
+                  audio: fb.audio || "",
+                  lyricsTitle: fb.lyricsTitle || "",
+                  lyrics: fb.lyrics || "",
                 }))
               : [],
           };
