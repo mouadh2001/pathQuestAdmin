@@ -1287,9 +1287,73 @@ button span {
   font-weight: 500;
 }
 
-/* ===== HIDDEN CLASS ===== */
-.hidden {
-  display: none !important;
+/* ===== STAT CARDS (Global Stats) ===== */
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 200px;
+  transition: all 0.2s ease;
+  flex: 1;
+  min-width: 200px;
+}
+
+.stat-card:hover {
+  border-color: #0ea5e9;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  font-size: 32px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ===== CHART CONTAINER ===== */
+.chart-container {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.chart-container canvas {
+  max-height: 400px;
 }
 
 .text-muted {

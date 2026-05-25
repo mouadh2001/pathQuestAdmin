@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Data - Patho Quest Admin</title>
+    <link rel="stylesheet" href="./css/dashboard.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Notification Toast -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="nav-brand">
+        <svg
+          class="nav-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          ></path>
+        </svg>
+        Patho Quest Admin
+      </div>
+      <div class="nav-links">
+        <a id="nav-globalstats" class="nav-link" href="globalstats.html">
+          Global Stats
+        </a>
+        <a id="nav-players" class="nav-link" href="players.html">
+          Players List
+        </a>
+        <a id="nav-gamedata" class="nav-link active" href="gamedata.html">
+          Game Data
+        </a>
+        <button class="nav-link btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+      <section class="content">
+        <!-- Game Data Editor Header -->
+        <div class="form-card">
+          <div class="flex-between mb-15">
+            <h2>Game Data Management</h2>
+            <div class="level-selector">
+              <label for="levelSelect"><strong>Select Level:</strong></label>
+              <select id="levelSelect" onchange="loadGameData()">
+                <option value="level1">Level 1</option>
+                <option value="level2">Level 2</option>
+                <option value="level3">Level 3</option>
+                <option value="level4">Level 4</option>
+                <option value="level5">Level 5</option>
+              </select>
+            </div>
+          </div>
+          <p class="subtitle">
+            Edit bonus info, links, and questions for the selected level.
+          </p>
+        </div>
+
+        <!-- Editor Content -->
+        <div id="gameDataEditor" class="hidden">
+          <!-- Level Configs Editor -->
+          <div class="card mb-20">
+            <h3>Level Info & Bonus</h3>
+            <div class="form-group">
+              <label>Hint (Magnifying Glass Link/Text)</label>
+              <textarea id="levelHint" rows="3" class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Loupe Link (Tumor classification URL)</label>
+              <input
+                type="text"
+                id="levelLoupeLink"
+                class="form-control"
+                placeholder="https://..."
+              />
+            </div>
+            <div class="form-group">
+              <label>Number of Questions</label>
+              <input
+                type="number"
+                id="levelQuestionCount"
+                class="form-control"
+                min="1"
+                max="20"
+                onchange="updateQuestionCount(this.value)"
+              />
+            </div>
+            <div class="form-group">
+              <label>Bonus Info Pages</label>
+              <div id="bonusInfoContainer" class="bonus-info-container"></div>
+              <button
+                type="button"
+                onclick="addBonusInfoSection()"
+                class="btn-secondary mt-10"
+              >
+                + Add Bonus Info Section
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label>Level Completion Badge</label>
+              <input
+                type="file"
+                id="levelBadgeUpload"
+                accept="image/*"
+                class="form-control-file"
+                onchange="handleLevelBadgeUpload(event)"
+              />
+              <input type="hidden" id="levelBadgeUrl" />
+              <div id="levelBadgePreview" class="image-preview"></div>
+            </div>
+            <button onclick="saveLevelConfig()" class="btn-primary mt-10">
+              Save Level Info
+            </button>
+          </div>
+
+          <!-- Questions Editor -->
+          <div class="card">
+            <h3>Questions Data</h3>
+            <div id="questionsContainer" class="questions-accordion">
+              <!-- Questions will be dynamically loaded here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="gameDataLoading" class="loader-container">
+          <div class="spinner"></div>
+          <p>Loading game data...</p>
+        </div>
+      </section>
+    </div>
+
+    <script type="module">
+      import { logout } from "./js/layout.js";
+      window.logout = logout;
+    </script>
+    <script type="module" src="./js/gameData.js"></script>
+  </body>
+</html>

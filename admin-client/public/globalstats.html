@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global Stats - Patho Quest Admin</title>
+    <link rel="stylesheet" href="./css/dashboard.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- Notification Toast -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="nav-brand">
+        <svg
+          class="nav-icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          ></path>
+        </svg>
+        Patho Quest Admin
+      </div>
+      <div class="nav-links">
+        <a id="nav-globalstats" class="nav-link active" href="globalstats.html">
+          Global Stats
+        </a>
+        <a id="nav-players" class="nav-link" href="players.html">
+          Players List
+        </a>
+        <a id="nav-gamedata" class="nav-link" href="gamedata.html">
+          Game Data
+        </a>
+        <button class="nav-link btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+      <section class="content">
+        <div class="form-card">
+          <h2>Global Stats</h2>
+          <p class="subtitle">
+            View aggregated performance metrics and first-try success insights
+            across all players.
+          </p>
+        </div>
+
+        <div
+          id="globalStats"
+          class="form-card hidden"
+          style="margin-bottom: 20px"
+        >
+          <div class="flex-between mb-15">
+            <h2 style="margin: 0">Global Summary (Cohort)</h2>
+            <button onclick="exportGlobalExcel()" class="btn-success">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Export Global Data (Excel)
+            </button>
+          </div>
+          <div
+            id="globalStatsContent"
+            style="display: flex; gap: 15px; flex-wrap: wrap"
+          ></div>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+      import { logout } from "./js/layout.js";
+      window.logout = logout;
+    </script>
+    <script type="module" src="./js/globalstats.js"></script>
+  </body>
+</html>

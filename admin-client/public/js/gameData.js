@@ -1,4 +1,6 @@
 // gameData.js
+import { showNotification } from "./layout.js";
+
 let currentQuestions = {};
 let currentBonusInfo = [];
 let currentQuestionCount = 1;
@@ -875,21 +877,6 @@ async function saveGameData() {
 window.loadGameData = loadGameData;
 window.saveLevelConfig = saveGameData;
 window.saveGameData = saveGameData;
-
-function showNotification(message, type = "info") {
-  let toast = document.getElementById("notification");
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "notification";
-    document.body.appendChild(toast);
-  }
-
-  toast.textContent = message;
-  toast.className = `notification ${type} show`;
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 4000);
-}
 
 function escapeHtml(unsafe) {
   if (!unsafe) return "";
