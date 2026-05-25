@@ -13,6 +13,7 @@ export async function getGlobalStats(req, res) {
       return res.json({
         totalPlayers: 0,
         averageScore: 0,
+        averageTimeSpent: 0,
         averageSuccessRate: 0,
         totalQuestionsAnswered: 0,
         levelStats: [],
@@ -23,6 +24,7 @@ export async function getGlobalStats(req, res) {
     let totalScore = 0;
     let totalCorrect = 0;
     let totalIncorrect = 0;
+    let totalTime = 0;
     let totalQuestionsAnswered = 0;
     const levelStatsMap = {};
 
@@ -30,6 +32,7 @@ export async function getGlobalStats(req, res) {
       totalScore += player.stats?.score || 0;
       totalCorrect += player.stats?.correct || 0;
       totalIncorrect += player.stats?.incorrect || 0;
+      totalTime += player.stats?.time || 0;
       totalQuestionsAnswered +=
         (player.stats?.correct || 0) + (player.stats?.incorrect || 0);
 
@@ -43,14 +46,16 @@ export async function getGlobalStats(req, res) {
               totalScore: 0,
               totalCorrect: 0,
               totalIncorrect: 0,
+              totalFirstTry: 0,
+              totalTime: 0,
               playerCount: 0,
-              averageScore: 0,
-              averageSuccessRate: 0,
             };
           }
           levelStatsMap[levelKey].totalScore += levelStat?.score || 0;
           levelStatsMap[levelKey].totalCorrect += levelStat?.correct || 0;
           levelStatsMap[levelKey].totalIncorrect += levelStat?.incorrect || 0;
+          levelStatsMap[levelKey].totalFirstTry += levelStat?.firstTryCorrectAnswers || 0;
+          levelStatsMap[levelKey].totalTime += levelStat?.time || 0;
           levelStatsMap[levelKey].playerCount += 1;
         });
       }
@@ -59,6 +64,8 @@ export async function getGlobalStats(req, res) {
     // Calculate averages
     const averageScore =
       players.length > 0 ? (totalScore / players.length).toFixed(2) : 0;
+    const averageTimeSpent =
+      players.length > 0 ? (totalTime / players.length).toFixed(1) : 0;
     const totalQuestionsAnsweredCount = totalCorrect + totalIncorrect;
     const averageSuccessRate =
       totalQuestionsAnsweredCount > 0
@@ -66,23 +73,24 @@ export async function getGlobalStats(req, res) {
         : 0;
 
     // Calculate level stats averages
-    const levelStats = Object.values(levelStatsMap).map((ls) => ({
-      levelName: ls.levelName,
-      averageScore:
-        ls.playerCount > 0 ? (ls.totalScore / ls.playerCount).toFixed(2) : 0,
-      averageSuccessRate:
-        ls.totalCorrect + ls.totalIncorrect > 0
-          ? (
-              (ls.totalCorrect / (ls.totalCorrect + ls.totalIncorrect)) *
-              100
-            ).toFixed(1)
-          : 0,
-      playerCount: ls.playerCount,
-    }));
+    const levelStats = Object.values(levelStatsMap).map((ls) => {
+      const totalQ = ls.totalCorrect + ls.totalIncorrect;
+      const successRate = totalQ > 0 ? ((ls.totalFirstTry / totalQ) * 100).toFixed(1) : 0;
+      return {
+        levelName: ls.levelName,
+        playerCount: ls.playerCount,
+        averageScore: ls.playerCount > 0 ? (ls.totalScore / ls.playerCount).toFixed(1) : "0.0",
+        averageTime: ls.playerCount > 0 ? (ls.totalTime / ls.playerCount).toFixed(1) : "0.0",
+        averageCorrect: ls.playerCount > 0 ? (ls.totalCorrect / ls.playerCount).toFixed(1) : "0.0",
+        averageIncorrect: ls.playerCount > 0 ? (ls.totalIncorrect / ls.playerCount).toFixed(1) : "0.0",
+        averageSuccessRate: parseFloat(successRate),
+      };
+    });
 
     res.json({
       totalPlayers: players.length,
       averageScore: parseFloat(averageScore),
+      averageTimeSpent: parseFloat(averageTimeSpent),
       averageSuccessRate: parseFloat(averageSuccessRate),
       totalQuestionsAnswered: totalQuestionsAnsweredCount,
       totalCorrectAnswers: totalCorrect,
@@ -113,14 +121,17 @@ export async function exportGlobalStatsCSV(req, res) {
     let totalScore = 0;
     let totalCorrect = 0;
     let totalIncorrect = 0;
+    let totalTime = 0;
 
     players.forEach((player) => {
       totalScore += player.stats?.score || 0;
       totalCorrect += player.stats?.correct || 0;
       totalIncorrect += player.stats?.incorrect || 0;
+      totalTime += player.stats?.time || 0;
     });
 
     const averageScore = (totalScore / players.length).toFixed(2);
+    const averageTimeSpent = (totalTime / players.length).toFixed(1);
     const totalQuestioned = totalCorrect + totalIncorrect;
     const averageSuccessRate =
       totalQuestioned > 0
@@ -134,13 +145,13 @@ Generated: ${new Date().toISOString()}
 Metric,Value
 Total Players,${players.length}
 Average Score,${averageScore}
-Average Success Rate (%),${averageSuccessRate}
-Total Questions Answered,${totalQuestioned}
+Average Time Spent (s),${averageTimeSpent}
 Total Correct Answers,${totalCorrect}
 Total Incorrect Answers,${totalIncorrect}
+Average Success Rate (%),${averageSuccessRate}
 
 Level Performance
-Level,Players,Avg Score,Success Rate (%)`;
+Level,Players,Avg Score,Avg Time Spent (s),Avg Correct,Avg Incorrect,Avg Success Rate (%)`;
 
     // Calculate level stats
     const levelStatsMap = {};
@@ -154,12 +165,16 @@ Level,Players,Avg Score,Success Rate (%)`;
               totalScore: 0,
               totalCorrect: 0,
               totalIncorrect: 0,
+              totalFirstTry: 0,
+              totalTime: 0,
               playerCount: 0,
             };
           }
           levelStatsMap[levelKey].totalScore += levelStat?.score || 0;
           levelStatsMap[levelKey].totalCorrect += levelStat?.correct || 0;
           levelStatsMap[levelKey].totalIncorrect += levelStat?.incorrect || 0;
+          levelStatsMap[levelKey].totalFirstTry += levelStat?.firstTryCorrectAnswers || 0;
+          levelStatsMap[levelKey].totalTime += levelStat?.time || 0;
           levelStatsMap[levelKey].playerCount += 1;
         });
       }
@@ -167,14 +182,12 @@ Level,Players,Avg Score,Success Rate (%)`;
 
     Object.values(levelStatsMap).forEach((ls) => {
       const avgScore = (ls.totalScore / ls.playerCount).toFixed(2);
-      const successRate =
-        ls.totalCorrect + ls.totalIncorrect > 0
-          ? (
-              (ls.totalCorrect / (ls.totalCorrect + ls.totalIncorrect)) *
-              100
-            ).toFixed(1)
-          : 0;
-      csvContent += `\n${ls.levelName},${ls.playerCount},${avgScore},${successRate}`;
+      const avgTime = (ls.totalTime / ls.playerCount).toFixed(1);
+      const avgCorrect = (ls.totalCorrect / ls.playerCount).toFixed(1);
+      const avgIncorrect = (ls.totalIncorrect / ls.playerCount).toFixed(1);
+      const totalQ = ls.totalCorrect + ls.totalIncorrect;
+      const successRate = totalQ > 0 ? ((ls.totalFirstTry / totalQ) * 100).toFixed(1) : 0;
+      csvContent += `\n${ls.levelName},${ls.playerCount},${avgScore},${avgTime},${avgCorrect},${avgIncorrect},${successRate}`;
     });
 
     // Send CSV file
@@ -206,7 +219,7 @@ export async function exportPlayersStatsCSV(req, res) {
 
     // Create CSV header
     const csvLines = [
-      "Username,Email,Total Score,Correct Answers,Incorrect Answers,Sessions,Created At",
+      "Username,Email,Total Score,Correct Answers,Incorrect Answers,Total Time Spent (s),Sessions,Created At",
     ];
 
     // Add player rows
@@ -214,6 +227,7 @@ export async function exportPlayersStatsCSV(req, res) {
       const score = player.stats?.score || 0;
       const correct = player.stats?.correct || 0;
       const incorrect = player.stats?.incorrect || 0;
+      const timeSpent = Math.round(player.stats?.time || 0);
       const sessions = player.stats?.totalSessions || 0;
       const createdAt = new Date(player.createdAt).toISOString().split("T")[0];
 
@@ -222,7 +236,7 @@ export async function exportPlayersStatsCSV(req, res) {
       const email = `"${(player.email || "").replace(/"/g, '""')}"`;
 
       csvLines.push(
-        `${username},${email},${score},${correct},${incorrect},${sessions},${createdAt}`,
+        `${username},${email},${score},${correct},${incorrect},${timeSpent},${sessions},${createdAt}`,
       );
     });
 
