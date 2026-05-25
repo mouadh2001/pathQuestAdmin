@@ -395,10 +395,16 @@ function renderFeedbackImagePreview(container, qKey, answerIndex, images) {
     const imgDescription =
       typeof imgData === "object" ? imgData?.description || "" : "";
 
+    const fileInputId = `replace-single-${qKey}-${answerIndex}-${imageIndex}`;
+
     imgCard.innerHTML = `
       <div class="image-preview-wrapper">
         <img src="${imgSrc}" alt="Feedback ${imageIndex + 1}" class="feedback-image-thumb" />
-        <button type="button" class="btn-remove-image" onclick="removeFeedbackImageWithMeta('${qKey}', ${answerIndex}, ${imageIndex})">×</button>
+        <div class="image-actions-overlay">
+          <button type="button" class="btn-image-action btn-replace-image" onclick="document.getElementById('${fileInputId}').click()" title="Replace this image">🔄</button>
+          <button type="button" class="btn-image-action btn-remove-image" onclick="removeFeedbackImageWithMeta('${qKey}', ${answerIndex}, ${imageIndex})" title="Remove this image">×</button>
+        </div>
+        <input type="file" id="${fileInputId}" class="hidden-file-input" accept="image/*" />
       </div>
       <div class="image-metadata">
         <div class="form-group mt-5">
@@ -417,6 +423,16 @@ function renderFeedbackImagePreview(container, qKey, answerIndex, images) {
         </div>
       </div>
     `;
+
+    const fileInput = imgCard.querySelector(`#${fileInputId}`);
+    fileInput.addEventListener("change", (event) =>
+      handleReplaceSingleFeedbackImage(
+        qKey,
+        answerIndex,
+        imageIndex,
+        event.target.files,
+      ),
+    );
 
     imagesList.appendChild(imgCard);
   });
@@ -527,6 +543,41 @@ window.removeFeedbackImageWithMeta = (qKey, answerIndex, imageIndex) => {
     currentQuestions[qKey].feedbacks[answerIndex].imgs.splice(imageIndex, 1);
     debouncedRenderQuestions();
   }
+};
+
+window.handleReplaceSingleFeedbackImage = async (
+  qKey,
+  answerIndex,
+  imageIndex,
+  files,
+) => {
+  if (!files || files.length === 0) return;
+
+  const img =
+    currentQuestions[qKey]?.feedbacks?.[answerIndex]?.imgs?.[imageIndex];
+  if (!img) return;
+
+  // Read the new image
+  const newImageUrl = await readFileAsDataUrl(files[0]);
+
+  // Get the existing metadata
+  let existingMetadata = {};
+  if (typeof img === "object") {
+    existingMetadata = {
+      title: img.title || "",
+      source: img.source || "",
+      description: img.description || "",
+    };
+  }
+
+  // Replace the image while keeping metadata
+  currentQuestions[qKey].feedbacks[answerIndex].imgs[imageIndex] = {
+    src: newImageUrl,
+    ...existingMetadata,
+  };
+
+  debouncedRenderQuestions();
+  showNotification(`Image ${imageIndex + 1} replaced successfully!`, "success");
 };
 
 window.updateFeedbackImageMeta = (
