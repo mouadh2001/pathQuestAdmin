@@ -86,6 +86,9 @@ function normalizeQuestion(source = {}) {
   return {
     q: source.q || '',
     imgs: Array.isArray(source.imgs) ? source.imgs : [],
+    audio: source.audio || '',
+    lyricsTitle: source.lyricsTitle || '',
+    lyrics: source.lyrics || '',
     a: answers,
     c: Array.isArray(source.c) ? source.c : [0],
     feedbacks: feedbacks.map((item) => ({
@@ -102,6 +105,9 @@ function createEmptyQuestion() {
   return {
     q: '',
     imgs: [],
+    audio: '',
+    lyricsTitle: '',
+    lyrics: '',
     a: ['', '', '', ''],
     c: [0],
     feedbacks: [{ text: '', imgs: [], audio: '', lyricsTitle: '', lyrics: '' }],

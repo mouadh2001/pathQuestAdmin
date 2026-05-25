@@ -99,6 +99,9 @@ export const getPublicGameData = async (req, res) => {
             a: Array.isArray(q.a) ? q.a : [],
             c: Array.isArray(q.c) ? q.c : [0],
             imgs: Array.isArray(q.imgs) ? q.imgs : [],
+            audio: q.audio || "",
+            lyricsTitle: q.lyricsTitle || "",
+            lyrics: q.lyrics || "",
             feedbacks: Array.isArray(q.feedbacks)
               ? q.feedbacks.map((fb) => ({
                   text: fb.text || "",
