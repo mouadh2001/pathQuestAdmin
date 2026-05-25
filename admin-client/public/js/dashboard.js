@@ -690,6 +690,39 @@ async function exportPlayerToExcel(player, historyData) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+async function exportPlayersStatsCSV() {
+  try {
+    const token = getToken();
+    if (!token) return showNotification("Not authorized", "error");
+
+    const response = await fetch("/api/admin/export/players", {
+      method: "GET",
+      headers: {
+        Authorization: token,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to export player statistics");
+    }
+
+    const csvContent = await response.text();
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `players-stats-${new Date().getTime()}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    showNotification("Player stats exported successfully!", "success");
+  } catch (error) {
+    console.error(error);
+    showNotification("Failed to export player statistics", "error");
+  }
+}
+
 window.createPlayer = createPlayer;
 window.deletePlayer = deletePlayer;
 window.requestPlayerDelete = requestPlayerDelete;

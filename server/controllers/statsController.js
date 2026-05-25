@@ -34,8 +34,9 @@ export async function getGlobalStats(req, res) {
         (player.stats?.correct || 0) + (player.stats?.incorrect || 0);
 
       // Calculate level stats
-      if (player.levelStats && typeof player.levelStats === "object") {
-        Object.entries(player.levelStats).forEach(([levelKey, levelStat]) => {
+      const levelStatsObj = player.levelStats instanceof Map ? Object.fromEntries(player.levelStats) : (player.levelStats || {});
+      if (levelStatsObj && typeof levelStatsObj === "object") {
+        Object.entries(levelStatsObj).forEach(([levelKey, levelStat]) => {
           if (!levelStatsMap[levelKey]) {
             levelStatsMap[levelKey] = {
               levelName: levelKey.replace("level", "Level "),
@@ -127,7 +128,7 @@ export async function exportGlobalStatsCSV(req, res) {
         : 0;
 
     // Create CSV content
-    const csvContent = `Global Statistics Report
+    let csvContent = `Global Statistics Report
 Generated: ${new Date().toISOString()}
 
 Metric,Value
@@ -144,8 +145,9 @@ Level,Players,Avg Score,Success Rate (%)`;
     // Calculate level stats
     const levelStatsMap = {};
     players.forEach((player) => {
-      if (player.levelStats && typeof player.levelStats === "object") {
-        Object.entries(player.levelStats).forEach(([levelKey, levelStat]) => {
+      const levelStatsObj = player.levelStats instanceof Map ? Object.fromEntries(player.levelStats) : (player.levelStats || {});
+      if (levelStatsObj && typeof levelStatsObj === "object") {
+        Object.entries(levelStatsObj).forEach(([levelKey, levelStat]) => {
           if (!levelStatsMap[levelKey]) {
             levelStatsMap[levelKey] = {
               levelName: levelKey.replace("level", "Level "),
