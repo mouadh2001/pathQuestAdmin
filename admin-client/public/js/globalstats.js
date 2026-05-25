@@ -31,7 +31,7 @@ export async function loadGlobalStats() {
         headers: {
           Authorization: adminToken,
         },
-      })
+      }),
     ]);
 
     if (!globalRes.ok) {
@@ -57,7 +57,8 @@ function renderGlobalStats(container, data, players) {
 
   // 1. Create stat cards for key metrics
   const cardsContainer = document.createElement("div");
-  cardsContainer.style.cssText = "display: flex; gap: 15px; flex-wrap: wrap; width: 100%; margin-bottom: 25px;";
+  cardsContainer.style.cssText =
+    "display: flex; gap: 15px; flex-wrap: wrap; width: 100%; margin-bottom: 25px;";
 
   const statCards = [
     {
@@ -99,7 +100,8 @@ function renderGlobalStats(container, data, players) {
 
   // 2. Create charts row
   const chartsRow = document.createElement("div");
-  chartsRow.style.cssText = "display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; width: 100%; margin-bottom: 30px;";
+  chartsRow.style.cssText =
+    "display: grid; grid-template-columns: 1fr; gap: 20px; width: 100%; margin-bottom: 30px;";
   container.appendChild(chartsRow);
 
   // Render level stats chart in chartsRow
@@ -111,7 +113,10 @@ function renderGlobalStats(container, data, players) {
   const levelAggregates = {};
   players.forEach((p) => {
     if (!p.levelStats) return;
-    const levelStatsObj = p.levelStats instanceof Map ? Object.fromEntries(p.levelStats) : p.levelStats;
+    const levelStatsObj =
+      p.levelStats instanceof Map
+        ? Object.fromEntries(p.levelStats)
+        : p.levelStats;
     if (!levelStatsObj) return;
 
     for (const [levelKey, lStats] of Object.entries(levelStatsObj)) {
@@ -130,7 +135,9 @@ function renderGlobalStats(container, data, players) {
       levelAggregates[levelKey].totalTime += lStats.time || 0;
 
       if (lStats.attemptsPerQuestion) {
-        for (const [qId, attempts] of Object.entries(lStats.attemptsPerQuestion)) {
+        for (const [qId, attempts] of Object.entries(
+          lStats.attemptsPerQuestion,
+        )) {
           if (!levelAggregates[levelKey].questions[qId]) {
             levelAggregates[levelKey].questions[qId] = {
               attemptedBy: 0,
@@ -159,9 +166,12 @@ function renderGlobalStats(container, data, players) {
   // 4. Create Level Performance Summary Table
   if (data.levelStats && data.levelStats.length > 0) {
     const levelPerformanceContainer = document.createElement("div");
-    levelPerformanceContainer.style.cssText = "width: 100%; margin-bottom: 30px;";
-    
-    const levelRows = data.levelStats.map((ls) => `
+    levelPerformanceContainer.style.cssText =
+      "width: 100%; margin-bottom: 30px;";
+
+    const levelRows = data.levelStats
+      .map(
+        (ls) => `
       <tr>
         <td style="padding: 12px; font-weight: bold; border-bottom: 1px solid #e2e8f0; color: #1e3a8a;">${ls.levelName}</td>
         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">${ls.playerCount}</td>
@@ -171,7 +181,9 @@ function renderGlobalStats(container, data, players) {
         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #ef4444;">${ls.averageIncorrect}</td>
         <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #15803d;">${ls.averageSuccessRate}%</td>
       </tr>
-    `).join("");
+    `,
+      )
+      .join("");
 
     levelPerformanceContainer.innerHTML = `
       <h3 style="color: #1e3a8a; margin-top: 0; margin-bottom: 15px;">Level Performance Summary</h3>
@@ -200,7 +212,7 @@ function renderGlobalStats(container, data, players) {
   // 5. Create Detailed Tables Section
   const tablesContainer = document.createElement("div");
   tablesContainer.style.cssText = "width: 100%; margin-top: 20px;";
-  
+
   let insightsHtml = "";
   for (const [lvl, lvlData] of Object.entries(levelAggregates).sort()) {
     const avgLvlScore = (lvlData.totalScore / lvlData.playersCount).toFixed(1);
@@ -256,14 +268,16 @@ function renderGlobalStats(container, data, players) {
     `;
   }
 
-  tablesContainer.innerHTML = insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>";
+  tablesContainer.innerHTML =
+    insightsHtml || "<p style='color: #6b7280;'>No level played yet.</p>";
   container.appendChild(tablesContainer);
 }
 
 function renderLevelStatsChart(parentContainer, levelStats) {
   const chartContainer = document.createElement("div");
   chartContainer.className = "chart-container";
-  chartContainer.style.cssText = "background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
+  chartContainer.style.cssText =
+    "background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
   chartContainer.innerHTML = `
     <h3 style="color: #1e3a8a; margin-top: 0; margin-bottom: 15px;">Performance by Level</h3>
     <canvas id="levelChart"></canvas>
@@ -360,7 +374,8 @@ function prepareGlobalChartData(levelAggregates) {
 function renderGlobalFirstTryChart(parentContainer, chartData) {
   const chartContainer = document.createElement("div");
   chartContainer.className = "chart-container";
-  chartContainer.style.cssText = "background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
+  chartContainer.style.cssText =
+    "background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05);";
   chartContainer.innerHTML = `
     <h3 style="color: #1e3a8a; margin-top: 0; margin-bottom: 15px;">Global First-Try Success Overview</h3>
     <canvas id="global-chart" style="max-height: 400px;"></canvas>
