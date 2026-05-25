@@ -237,7 +237,17 @@ function renderQuestions() {
         </div>
         <div class="form-group">
           <label>🖼️ Feedback Images</label>
-          <input id="feedbackImages-${qKey}-${aIndex}" type="file" class="form-control-file" accept="image/*" multiple />
+          <div class="feedback-images-controls">
+            <div class="image-control-group">
+              <label class="control-label">➕ Add Images to Existing</label>
+              <input id="feedbackImages-add-${qKey}-${aIndex}" type="file" class="form-control-file" accept="image/*" multiple title="Add new images to the existing ones" />
+            </div>
+            <div class="image-control-divider">or</div>
+            <div class="image-control-group">
+              <label class="control-label">🔄 Replace All Images</label>
+              <input id="feedbackImages-replace-${qKey}-${aIndex}" type="file" class="form-control-file" accept="image/*" multiple title="Replace all existing images with new ones" />
+            </div>
+          </div>
           <div id="feedbackImagesPreview-${qKey}-${aIndex}" class="image-preview"></div>
         </div>
       `;
@@ -261,12 +271,30 @@ function renderQuestions() {
         updateFeedbackText(qKey, aIndex, event.target.value),
       );
 
-      const feedbackImagesInput = optItem.querySelector(
-        `#feedbackImages-${qKey}-${aIndex}`,
+      // Handle add images input
+      const feedbackImagesAddInput = optItem.querySelector(
+        `#feedbackImages-add-${qKey}-${aIndex}`,
       );
-      feedbackImagesInput.addEventListener("change", (event) =>
-        handleFeedbackImagesUpload(qKey, aIndex, event.target.files),
+      if (feedbackImagesAddInput) {
+        feedbackImagesAddInput.addEventListener("change", (event) =>
+          handleFeedbackImagesUpload(qKey, aIndex, event.target.files, "add"),
+        );
+      }
+
+      // Handle replace images input
+      const feedbackImagesReplaceInput = optItem.querySelector(
+        `#feedbackImages-replace-${qKey}-${aIndex}`,
       );
+      if (feedbackImagesReplaceInput) {
+        feedbackImagesReplaceInput.addEventListener("change", (event) =>
+          handleFeedbackImagesUpload(
+            qKey,
+            aIndex,
+            event.target.files,
+            "replace",
+          ),
+        );
+      }
 
       // Render feedback images with metadata
       const feedbackImagesPreview = optItem.querySelector(
@@ -448,15 +476,37 @@ window.updateQuestionLyrics = (qKey, val) => {
   currentQuestions[qKey].lyrics = val;
 };
 
-window.handleFeedbackImagesUpload = async (qKey, answerIndex, files) => {
+window.handleFeedbackImagesUpload = async (
+  qKey,
+  answerIndex,
+  files,
+  mode = "add",
+) => {
   if (!files || files.length === 0) return;
   currentQuestions[qKey] = currentQuestions[qKey] || createEmptyQuestion();
   if (!currentQuestions[qKey].feedbacks) currentQuestions[qKey].feedbacks = [];
   if (!currentQuestions[qKey].feedbacks[answerIndex]) {
     currentQuestions[qKey].feedbacks[answerIndex] = { text: "", imgs: [] };
   }
-  currentQuestions[qKey].feedbacks[answerIndex].imgs =
-    await readFilesAsDataUrls(files);
+
+  const newImages = await readFilesAsDataUrls(files);
+
+  if (mode === "replace") {
+    // Replace all existing images
+    currentQuestions[qKey].feedbacks[answerIndex].imgs = newImages;
+  } else {
+    // Add to existing images (append mode)
+    const existingImages = Array.isArray(
+      currentQuestions[qKey].feedbacks[answerIndex].imgs,
+    )
+      ? currentQuestions[qKey].feedbacks[answerIndex].imgs
+      : [];
+    currentQuestions[qKey].feedbacks[answerIndex].imgs = [
+      ...existingImages,
+      ...newImages,
+    ];
+  }
+
   debouncedRenderQuestions();
 };
 
