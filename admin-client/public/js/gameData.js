@@ -15,6 +15,54 @@ function debouncedRenderQuestions() {
   }, 100);
 }
 
+/**
+ * Convert flat bonusInfo array [ { text, image }, ... ] to editor format
+ * Editor format: [ { content: [ { type, value }, ... ] }, ... ]
+ */
+function convertBonusInfoToEditorFormat(bonusInfoArray) {
+  if (!Array.isArray(bonusInfoArray)) return [];
+
+  const blocks = [];
+  bonusInfoArray.forEach((item) => {
+    if (item.text) {
+      blocks.push({ type: "text", value: item.text });
+    }
+    if (item.image) {
+      blocks.push({ type: "images", value: [item.image] });
+    }
+  });
+
+  // Wrap blocks in section if not empty
+  return blocks.length > 0 ? [{ content: blocks }] : [];
+}
+
+/**
+ * Convert editor format [ { content: [ { type, value }, ... ] }, ... ] to flat bonusInfo
+ * Flat format: [ { text, image }, ... ]
+ */
+function convertEditorFormatToBonusInfo(sectionsArray) {
+  if (!Array.isArray(sectionsArray)) return [];
+
+  const bonusInfo = [];
+  sectionsArray.forEach((section) => {
+    if (Array.isArray(section.content)) {
+      section.content.forEach((block) => {
+        if (block.type === "text") {
+          bonusInfo.push({ text: block.value || "", image: "" });
+        } else if (block.type === "images" && Array.isArray(block.value)) {
+          block.value.forEach((imgUrl) => {
+            if (imgUrl) {
+              bonusInfo.push({ text: "", image: imgUrl });
+            }
+          });
+        }
+      });
+    }
+  });
+
+  return bonusInfo;
+}
+
 export async function loadGameData() {
   const level = document.getElementById("levelSelect").value;
   const editor = document.getElementById("gameDataEditor");
@@ -58,7 +106,8 @@ export async function loadGameData() {
     document.getElementById("levelBadgeUrl").value = currentBadgeDataUrl;
     updateLevelBadgePreview();
 
-    currentBonusInfo = Array.isArray(data.bonusInfo) ? data.bonusInfo : [];
+    // Convert flat bonusInfo format to editor format with sections and blocks
+    currentBonusInfo = convertBonusInfoToEditorFormat(data.bonusInfo);
     renderBonusInfo();
 
     currentQuestions = normalizeQuestions(
@@ -698,8 +747,106 @@ window.updateContentBlock = (sectionIndex, blockIndex, blockType, value) => {
   }
 };
 
-window.handleBonusImageUpload = async (sectionIndex, blockIndex, files) => {
+// ===== NEW FLAT BLOCK STRUCTURE FUNCTIONS =====
+
+window.addBlockToBonus = (blockType) => {
+  if (!currentBonusInfo[0]) {
+    currentBonusInfo[0] = { content: [] };
+  }
+  currentBonusInfo[0].content.push({
+    type: blockType,
+    value: blockType === "text" ? "" : [],
+  });
+  debouncedRenderBonusInfo();
+};
+
+window.insertBlockBefore = (globalIndex, blockType) => {
+  // Get all blocks
+  let allBlocks = [];
+  currentBonusInfo.forEach((section, sectionIndex) => {
+    if (Array.isArray(section.content)) {
+      section.content.forEach((block, blockIndex) => {
+        allBlocks.push({ block, sectionIndex, blockIndex });
+      });
+    }
+  });
+
+  if (globalIndex < 0 || globalIndex >= allBlocks.length) return;
+
+  const { sectionIndex, blockIndex } = allBlocks[globalIndex];
+
+  // Insert before the block
+  currentBonusInfo[sectionIndex].content.splice(blockIndex, 0, {
+    type: blockType,
+    value: blockType === "text" ? "" : [],
+  });
+
+  debouncedRenderBonusInfo();
+};
+
+window.removeBlock = (globalIndex) => {
+  // Get all blocks
+  let allBlocks = [];
+  currentBonusInfo.forEach((section, sectionIndex) => {
+    if (Array.isArray(section.content)) {
+      section.content.forEach((block, blockIndex) => {
+        allBlocks.push({ block, sectionIndex, blockIndex });
+      });
+    }
+  });
+
+  if (globalIndex < 0 || globalIndex >= allBlocks.length) return;
+
+  const { sectionIndex, blockIndex } = allBlocks[globalIndex];
+  currentBonusInfo[sectionIndex].content.splice(blockIndex, 1);
+  debouncedRenderBonusInfo();
+};
+
+window.updateBlockValue = (globalIndex, value) => {
+  // Get all blocks
+  let allBlocks = [];
+  currentBonusInfo.forEach((section, sectionIndex) => {
+    if (Array.isArray(section.content)) {
+      section.content.forEach((block, blockIndex) => {
+        allBlocks.push({ block, sectionIndex, blockIndex });
+      });
+    }
+  });
+
+  if (globalIndex < 0 || globalIndex >= allBlocks.length) return;
+
+  const { sectionIndex, blockIndex } = allBlocks[globalIndex];
+  currentBonusInfo[sectionIndex].content[blockIndex].value = value;
+};
+
+window.handleBonusImageUpload = async (
+  globalIndex,
+  files,
+  sectionIndex,
+  blockIndex,
+) => {
   if (!files || files.length === 0) return;
+
+  // If using new flat structure, get section/blockIndex from globalIndex
+  if (
+    globalIndex !== undefined &&
+    (sectionIndex === undefined || blockIndex === undefined)
+  ) {
+    let allBlocks = [];
+    currentBonusInfo.forEach((section, idx) => {
+      if (Array.isArray(section.content)) {
+        section.content.forEach((block, blIdx) => {
+          allBlocks.push({ block, sectionIndex: idx, blockIndex: blIdx });
+        });
+      }
+    });
+
+    if (globalIndex < allBlocks.length) {
+      sectionIndex = allBlocks[globalIndex].sectionIndex;
+      blockIndex = allBlocks[globalIndex].blockIndex;
+    }
+  }
+
   if (!currentBonusInfo[sectionIndex]) return;
   if (!Array.isArray(currentBonusInfo[sectionIndex].content)) return;
 
@@ -713,53 +860,131 @@ function renderBonusInfo() {
   if (!container) return;
   container.innerHTML = "";
 
-  if (currentBonusInfo.length === 0) {
-    container.innerHTML =
-      '<p class="text-muted" style="padding: 20px; text-align: center;">No bonus info sections added yet.</p>';
-    return;
-  }
-
+  // Get all blocks from sections (flatten them for display)
+  let allBlocks = [];
   currentBonusInfo.forEach((section, sectionIndex) => {
-    const card = document.createElement("div");
-    card.className = "bonus-info-section";
-    card.innerHTML = `
-      <div class="bonus-section-header">
-        <div class="bonus-section-title">
-          <span class="bonus-section-number">${sectionIndex + 1}</span>
-          <h4>Bonus Info Section ${sectionIndex + 1}</h4>
-        </div>
-        <button type="button" class="btn-danger btn-sm" onclick="removeBonusInfoSection(${sectionIndex})">
-          <span>🗑️</span> Remove
-        </button>
-      </div>
-      <div id="contentBlocks-${sectionIndex}" class="content-blocks" data-section-index="${sectionIndex}"></div>
-      <div class="bonus-controls mt-10">
-        <button type="button" class="btn-secondary btn-sm" onclick="addContentBlock(${sectionIndex}, 'text')">
-          <span>📝</span> Add Text Block
-        </button>
-        <button type="button" class="btn-secondary btn-sm" onclick="addContentBlock(${sectionIndex}, 'images')">
-          <span>🖼️</span> Add Image(s)
-        </button>
-      </div>
-    `;
-
-    container.appendChild(card);
-
-    // Render content blocks
-    const contentContainer = card.querySelector(
-      `#contentBlocks-${sectionIndex}`,
-    );
-    const content = Array.isArray(section.content) ? section.content : [];
-
-    if (content.length === 0) {
-      contentContainer.innerHTML =
-        '<p class="text-muted" style="text-align: center; padding: 20px;">No content blocks added. Add text or images below.</p>';
-    } else {
-      content.forEach((block, blockIndex) => {
-        renderContentBlock(contentContainer, sectionIndex, blockIndex, block);
+    if (Array.isArray(section.content)) {
+      section.content.forEach((block, blockIndex) => {
+        allBlocks.push({ block, sectionIndex, blockIndex });
       });
     }
   });
+
+  if (allBlocks.length === 0) {
+    container.innerHTML = `
+      <div style="padding: 20px; text-align: center;">
+        <p class="text-muted">No bonus info blocks yet.</p>
+        <button type="button" class="btn-secondary mt-10" onclick="addBlockToBonus('text')">
+          <span>📝</span> Add Text Block
+        </button>
+        <button type="button" class="btn-secondary mt-10" onclick="addBlockToBonus('images')">
+          <span>🖼️</span> Add Image Block
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const blocksList = document.createElement("div");
+  blocksList.className = "bonus-blocks-list";
+
+  allBlocks.forEach((item, globalIndex) => {
+    const { block, sectionIndex, blockIndex } = item;
+    const blockEl = document.createElement("div");
+    blockEl.className = `bonus-block bonus-block-${block.type}`;
+    blockEl.id = `block-${globalIndex}`;
+
+    const blockHeader = document.createElement("div");
+    blockHeader.className = "bonus-block-header";
+
+    const typeLabel = block.type === "text" ? "📝 Text" : "🖼️ Images";
+    const preview =
+      block.type === "text"
+        ? (block.value || "").substring(0, 50) +
+          (block.value?.length > 50 ? "..." : "")
+        : `${Array.isArray(block.value) ? block.value.length : 0} image(s)`;
+
+    blockHeader.innerHTML = `
+      <div class="bonus-block-info">
+        <span class="bonus-block-type">${typeLabel}</span>
+        <span class="bonus-block-preview">${escapeHtml(preview)}</span>
+      </div>
+      <div class="bonus-block-controls">
+        <button type="button" class="btn-sm" onclick="insertBlockBefore(${globalIndex}, 'text')" title="Insert text block before">➕ Text</button>
+        <button type="button" class="btn-sm" onclick="insertBlockBefore(${globalIndex}, 'images')" title="Insert image block before">➕ Images</button>
+        <button type="button" class="btn-danger btn-sm" onclick="removeBlock(${globalIndex})" title="Remove">🗑️</button>
+      </div>
+    `;
+    blockEl.appendChild(blockHeader);
+
+    const blockContent = document.createElement("div");
+    blockContent.className = "bonus-block-content";
+
+    if (block.type === "text") {
+      blockContent.innerHTML = `
+        <textarea 
+          class="form-control text-block-input"
+          id="text-block-${globalIndex}"
+          rows="3"
+          placeholder="Enter text content..."
+        >${escapeHtml(block.value || "")}</textarea>
+      `;
+      const textarea = blockContent.querySelector(`#text-block-${globalIndex}`);
+      textarea.addEventListener("change", (e) =>
+        updateBlockValue(globalIndex, e.target.value),
+      );
+    } else if (block.type === "images") {
+      blockContent.innerHTML = `
+        <div class="images-block-wrapper">
+          <input 
+            type="file"
+            multiple
+            accept="image/*"
+            class="form-control-file"
+            id="images-block-${globalIndex}"
+          />
+          <div id="imagePreview-block-${globalIndex}" class="image-preview"></div>
+        </div>
+      `;
+      const imageInput = blockContent.querySelector(
+        `#images-block-${globalIndex}`,
+      );
+      imageInput.addEventListener("change", (e) =>
+        handleBonusImageUpload(
+          globalIndex,
+          e.target.files,
+          sectionIndex,
+          blockIndex,
+        ),
+      );
+
+      const images = Array.isArray(block.value) ? block.value : [];
+      const previewContainer = blockContent.querySelector(
+        `#imagePreview-block-${globalIndex}`,
+      );
+      if (images.length > 0) {
+        renderImagePreview(previewContainer, images, null);
+      }
+    }
+
+    blockEl.appendChild(blockContent);
+    blocksList.appendChild(blockEl);
+  });
+
+  // Add button to add new blocks
+  const addButtonsDiv = document.createElement("div");
+  addButtonsDiv.className = "bonus-add-block-buttons mt-20";
+  addButtonsDiv.innerHTML = `
+    <button type="button" class="btn-secondary" onclick="addBlockToBonus('text')">
+      <span>📝</span> Add Text Block
+    </button>
+    <button type="button" class="btn-secondary" onclick="addBlockToBonus('images')">
+      <span>🖼️</span> Add Image Block
+    </button>
+  `;
+
+  container.appendChild(blocksList);
+  container.appendChild(addButtonsDiv);
 }
 
 function renderContentBlock(container, sectionIndex, blockIndex, block) {
@@ -846,6 +1071,9 @@ async function saveGameData() {
   const loupeLink = document.getElementById("levelLoupeLink").value;
   const badgeUrl = document.getElementById("levelBadgeUrl").value;
 
+  // Convert editor format (sections with content blocks) back to flat bonusInfo format
+  const bonusInfoForDB = convertEditorFormatToBonusInfo(currentBonusInfo);
+
   try {
     const response = await fetch(`/api/admin/gamedata/${level}`, {
       method: "PUT",
@@ -856,7 +1084,7 @@ async function saveGameData() {
       body: JSON.stringify({
         hint,
         loupeLink,
-        bonusInfo: currentBonusInfo,
+        bonusInfo: bonusInfoForDB,
         badgeUrl,
         questionCount: currentQuestionCount,
         questions: currentQuestions,
