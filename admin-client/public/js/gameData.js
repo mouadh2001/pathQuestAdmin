@@ -901,3 +901,8 @@ function readFileAsDataUrl(file) {
 function readFilesAsDataUrls(files) {
   return Promise.all(Array.from(files).map(readFileAsDataUrl));
 }
+
+// Initialize - Load the default level (level1) when page loads
+document.addEventListener("DOMContentLoaded", () => {
+  loadGameData();
+});
