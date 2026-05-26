@@ -31,7 +31,11 @@ router.post("/test-email", async (req, res) => {
       process.env.EMAIL_PASSWORD ? "✓ Set" : "✗ Not set",
     );
 
-    const result = await sendPlayerRegistrationConfirmation(email, "TestUser", "TestPassword123");
+    const result = await sendPlayerRegistrationConfirmation(
+      email,
+      "TestUser",
+      "TestPassword123",
+    );
 
     res.json({
       message: "Test email result",
@@ -46,8 +50,18 @@ router.post("/test-email", async (req, res) => {
 });
 
 /* ===============================
-   PLAYER LOGIN
+   TEST TOKEN ENDPOINT (For Debugging)
 ================================= */
+router.get("/test-token", playerAuthMiddleware, (req, res) => {
+  res.json({
+    message: "✅ Token is valid!",
+    player: req.player,
+    jwt_secret_set: !!process.env.JWT_SECRET,
+  });
+});
+
+/* ===============================
+   PLAYER LOGIN
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -139,14 +153,16 @@ router.post("/register", async (req, res) => {
     // Send welcome email asynchronously without blocking the response
     console.log("Sending welcome email to:", email);
     sendPlayerRegistrationConfirmation(email, username, password)
-      .then(emailResult => {
+      .then((emailResult) => {
         if (!emailResult.success) {
           console.error("Email sending failed:", emailResult.error);
         } else {
           console.log("Welcome email sent successfully to:", email);
         }
       })
-      .catch(err => console.error("Unhandled error sending welcome email:", err));
+      .catch((err) =>
+        console.error("Unhandled error sending welcome email:", err),
+      );
 
     // Generate token
     const token = jwt.sign(
@@ -182,7 +198,9 @@ router.post("/reset-password", async (req, res) => {
     }
 
     if (newPassword.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
     }
 
     const player = await Player.findOne({ email });
@@ -235,28 +253,34 @@ router.post("/create", authMiddleware, async (req, res) => {
     // Send email with credentials to the player asynchronously
     console.log("Sending player credentials email to:", email);
     sendPlayerCredentialsEmail(email, password)
-      .then(playerEmailResult => {
+      .then((playerEmailResult) => {
         if (!playerEmailResult.success) {
-          console.error("Player credentials email sending failed:", playerEmailResult.error);
+          console.error(
+            "Player credentials email sending failed:",
+            playerEmailResult.error,
+          );
         } else {
           console.log("Player credentials email sent successfully to:", email);
         }
       })
-      .catch(err => console.error(err));
+      .catch((err) => console.error(err));
 
     // Send email notification to admin with credentials asynchronously
     const adminEmail = req.adminEmail || process.env.ADMIN_EMAIL;
     if (adminEmail) {
       console.log("Sending admin notification email to:", adminEmail);
       sendAccountCreationEmail(adminEmail, email, password)
-        .then(emailResult => {
+        .then((emailResult) => {
           if (!emailResult.success) {
             console.error("Admin email sending failed:", emailResult.error);
           } else {
-            console.log("Admin notification email sent successfully to:", adminEmail);
+            console.log(
+              "Admin notification email sent successfully to:",
+              adminEmail,
+            );
           }
         })
-        .catch(err => console.error(err));
+        .catch((err) => console.error(err));
     } else {
       console.warn("No admin email found to send notification");
     }
@@ -307,9 +331,9 @@ const updatePlayerStats = async (req, res) => {
       correctAnswers,
       firstTryCorrectAnswers,
       character,
-      badges = {}
+      badges = {},
     } = req.body;
-    
+
     const player = await Player.findById(req.player.id);
 
     if (!player) {
@@ -321,7 +345,9 @@ const updatePlayerStats = async (req, res) => {
     const existingLevelStats = player.levelStats.get(levelId);
     const existingScore = existingLevelStats ? existingLevelStats.score : -1;
     const incomingScore = Number(levelScore) || 0;
-    const existingFirstTry = Number(existingLevelStats?.firstTryCorrectAnswers || 0);
+    const existingFirstTry = Number(
+      existingLevelStats?.firstTryCorrectAnswers || 0,
+    );
     const incomingFirstTry = Number(firstTryCorrectAnswers || 0);
 
     const rankingOrder = {
@@ -369,13 +395,13 @@ const updatePlayerStats = async (req, res) => {
     player.levelStats.set(levelId, {
       score: bestScore,
       time: useIncomingStats
-        ? Number(timeSpent) || (existingLevelStats?.time || 0)
+        ? Number(timeSpent) || existingLevelStats?.time || 0
         : existingLevelStats?.time || 0,
       correct: useIncomingStats
-        ? Number(correctAnswers) || (existingLevelStats?.correct || 0)
+        ? Number(correctAnswers) || existingLevelStats?.correct || 0
         : existingLevelStats?.correct || 0,
       incorrect: useIncomingStats
-        ? Number(incorrectAnswers) || (existingLevelStats?.incorrect || 0)
+        ? Number(incorrectAnswers) || existingLevelStats?.incorrect || 0
         : existingLevelStats?.incorrect || 0,
       firstTryCorrectAnswers: Math.max(existingFirstTry, incomingFirstTry),
       attemptsPerQuestion:
@@ -421,7 +447,7 @@ const updatePlayerStats = async (req, res) => {
       correctAnswers: Number(correctAnswers) || 0,
       firstTryCorrectAnswers: Number(firstTryCorrectAnswers) || 0,
       character: player.character,
-      badges
+      badges,
     });
 
     res.json({
@@ -448,7 +474,9 @@ router.get("/stats/history", playerAuthMiddleware, async (req, res) => {
   try {
     const history = await PlayerStat.find({ player: req.player.id })
       .sort({ pushedAt: -1 })
-      .select("levelScore totalScore correctAnswers incorrectAnswers timeSpent pushedAt")
+      .select(
+        "levelScore totalScore correctAnswers incorrectAnswers timeSpent pushedAt",
+      )
       .lean();
 
     res.json({ history });
